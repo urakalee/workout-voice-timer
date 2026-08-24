@@ -12,10 +12,10 @@ import {
 } from "@dnd-kit/core";
 import {
   arrayMove,
+  horizontalListSortingStrategy,
   sortableKeyboardCoordinates,
   SortableContext,
   useSortable,
-  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -251,6 +251,13 @@ function spokenDuration(totalSeconds: number) {
   return `${seconds}秒`;
 }
 
+function blockDuration(block: WorkoutBlock) {
+  return block.rounds * block.activities.reduce(
+    (sum, item) => sum + (item.duration + item.rest) * Math.max(1, item.repeat),
+    0,
+  );
+}
+
 function DurationInput({
   value,
   onChange,
@@ -297,18 +304,56 @@ function DurationInput({
   );
 }
 
-function ActivityEditor({
+function SortableBlockTab({
+  block,
+  tone,
+  selected,
+  onSelect,
+}: {
+  block: WorkoutBlock;
+  tone: number;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: block.id,
+    data: { type: "block" },
+  });
+
+  return (
+    <article
+      className={`block-tab tone-${tone % 4} ${selected ? "is-selected" : ""} ${isDragging ? "is-dragging" : ""}`}
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+    >
+      <button
+        className="drag-handle compact-drag"
+        type="button"
+        aria-label={`拖动${block.title}环节`}
+        {...attributes}
+        {...listeners}
+      >
+        ⠿
+      </button>
+      <button className="block-tab-select" type="button" onClick={onSelect} aria-pressed={selected}>
+        <strong>{block.title}</strong>
+        <span>{block.activities.length} 个动作 · {formatTime(blockDuration(block))}</span>
+      </button>
+      {block.rounds > 1 && <span className="round-badge">{block.rounds} 轮</span>}
+    </article>
+  );
+}
+
+function SortableActivityChip({
   item,
   blockId,
-  onChange,
-  onDuplicate,
-  onDelete,
+  selected,
+  onSelect,
 }: {
   item: Activity;
   blockId: string;
-  onChange: (patch: Partial<Activity>) => void;
-  onDuplicate: () => void;
-  onDelete: () => void;
+  selected: boolean;
+  onSelect: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
@@ -317,37 +362,72 @@ function ActivityEditor({
 
   return (
     <article
-      className={`activity-card ${isDragging ? "is-dragging" : ""}`}
+      className={`activity-chip ${selected ? "is-selected" : ""} ${isDragging ? "is-dragging" : ""}`}
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
     >
-      <div className="activity-heading">
-        <button
-          className="drag-handle"
-          type="button"
-          aria-label={`拖动${item.name}`}
-          {...attributes}
-          {...listeners}
-        >
-          ⠿
-        </button>
-        <input
-          className="activity-name"
-          aria-label="动作名称"
-          value={item.name}
-          onChange={(event) => onChange({ name: event.target.value })}
-        />
+      <button
+        className="drag-handle compact-drag"
+        type="button"
+        aria-label={`拖动${item.name}`}
+        {...attributes}
+        {...listeners}
+      >
+        ⠿
+      </button>
+      <button className="activity-chip-select" type="button" onClick={onSelect} aria-pressed={selected}>
+        <strong>{item.name}</strong>
+        <span>
+          {item.kind === "reps" ? `${item.reps} 次 / 最长 ${formatTime(item.duration)}` : formatTime(item.duration)}
+          {item.rest > 0 ? ` · 休 ${formatTime(item.rest)}` : ""}
+        </span>
+      </button>
+    </article>
+  );
+}
+
+function SelectedActivityEditor({
+  item,
+  blocks,
+  blockId,
+  onChange,
+  onMove,
+  onDuplicate,
+  onDelete,
+}: {
+  item: Activity;
+  blocks: WorkoutBlock[];
+  blockId: string;
+  onChange: (patch: Partial<Activity>) => void;
+  onMove: (blockId: string) => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <article className="selected-editor">
+      <div className="selected-editor-heading">
+        <div>
+          <span className="editor-label">正在编辑动作</span>
+          <input
+            className="activity-name"
+            aria-label="动作名称"
+            value={item.name}
+            onChange={(event) => onChange({ name: event.target.value })}
+          />
+        </div>
         <div className="row-actions">
-          <button type="button" onClick={onDuplicate} aria-label={`复制${item.name}`}>
-            复制
-          </button>
-          <button className="danger-link" type="button" onClick={onDelete} aria-label={`删除${item.name}`}>
-            删除
-          </button>
+          <button type="button" onClick={onDuplicate} aria-label={`复制${item.name}`}>复制</button>
+          <button className="danger-link" type="button" onClick={onDelete} aria-label={`删除${item.name}`}>删除</button>
         </div>
       </div>
 
       <div className="activity-controls">
+        <label className="select-field">
+          <span>所属环节</span>
+          <select value={blockId} onChange={(event) => onMove(event.target.value)}>
+            {blocks.map((block) => <option key={block.id} value={block.id}>{block.title}</option>)}
+          </select>
+        </label>
         <label className="select-field">
           <span>模式</span>
           <select
@@ -408,103 +488,6 @@ function ActivityEditor({
   );
 }
 
-function BlockEditor({
-  block,
-  tone,
-  onChange,
-  onAddActivity,
-  onDuplicateActivity,
-  onDeleteActivity,
-  onUpdateActivity,
-  onDeleteBlock,
-}: {
-  block: WorkoutBlock;
-  tone: number;
-  onChange: (patch: Partial<WorkoutBlock>) => void;
-  onAddActivity: () => void;
-  onDuplicateActivity: (activityId: string) => void;
-  onDeleteActivity: (activityId: string) => void;
-  onUpdateActivity: (activityId: string, patch: Partial<Activity>) => void;
-  onDeleteBlock: () => void;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: block.id,
-    data: { type: "block" },
-  });
-
-  const seconds = useMemo(
-    () =>
-      block.rounds *
-      block.activities.reduce(
-        (sum, item) => sum + (item.duration + item.rest) * Math.max(1, item.repeat),
-        0,
-      ),
-    [block],
-  );
-
-  return (
-    <section
-      className={`workout-block tone-${tone % 4} ${isDragging ? "is-dragging" : ""}`}
-      ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
-    >
-      <div className="block-heading">
-        <button
-          className="drag-handle block-drag"
-          type="button"
-          aria-label={`拖动${block.title}环节`}
-          {...attributes}
-          {...listeners}
-        >
-          ⠿
-        </button>
-        <div className="block-title-wrap">
-          <input
-            className="block-title"
-            aria-label="环节名称"
-            value={block.title}
-            onChange={(event) => onChange({ title: event.target.value })}
-          />
-          <span>{block.activities.length} 个动作 · {formatTime(seconds)}</span>
-        </div>
-        <label className="round-field">
-          <span>轮数</span>
-          <input
-            inputMode="numeric"
-            min="1"
-            type="number"
-            value={block.rounds}
-            onChange={(event) => onChange({ rounds: Math.max(1, Number(event.target.value) || 1) })}
-          />
-        </label>
-        <button className="danger-link block-delete" type="button" onClick={onDeleteBlock}>
-          删除环节
-        </button>
-      </div>
-
-      <SortableContext items={block.activities.map((item) => item.id)} strategy={verticalListSortingStrategy}>
-        <div className="activity-list">
-          {block.activities.map((item) => (
-            <ActivityEditor
-              key={item.id}
-              blockId={block.id}
-              item={item}
-              onChange={(patch) => onUpdateActivity(item.id, patch)}
-              onDuplicate={() => onDuplicateActivity(item.id)}
-              onDelete={() => onDeleteActivity(item.id)}
-            />
-          ))}
-          {block.activities.length === 0 && <div className="empty-drop">把动作拖到这里，或添加新动作</div>}
-        </div>
-      </SortableContext>
-
-      <button className="add-activity" type="button" onClick={onAddActivity}>
-        ＋ 添加动作
-      </button>
-    </section>
-  );
-}
-
 export default function Home() {
   const [library, setLibrary] = useState<RoutineLibrary>(DEFAULT_LIBRARY);
   const [settings, setSettings] = useState<VoiceSettings>(DEFAULT_SETTINGS);
@@ -515,6 +498,8 @@ export default function Home() {
   const [playerStatus, setPlayerStatus] = useState<PlayerStatus>("idle");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [remaining, setRemaining] = useState(0);
+  const [selectedBlockId, setSelectedBlockId] = useState("block-warmup");
+  const [selectedActivityId, setSelectedActivityId] = useState("warmup-walk");
   const deadlineRef = useRef(0);
   const announcedRef = useRef<Set<string>>(new Set());
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -527,7 +512,10 @@ export default function Home() {
 
   const currentRoutine =
     library.routines.find((routine) => routine.id === library.activeId) ?? library.routines[0];
-
+  const selectedBlock =
+    currentRoutine?.blocks.find((block) => block.id === selectedBlockId) ?? currentRoutine?.blocks[0];
+  const selectedActivity =
+    selectedBlock?.activities.find((item) => item.id === selectedActivityId) ?? selectedBlock?.activities[0];
   const calculatedTimeline = useMemo(
     () => (currentRoutine ? buildTimeline(currentRoutine) : []),
     [currentRoutine],
@@ -826,6 +814,141 @@ export default function Home() {
         }),
       };
     });
+    if (sourceBlockId !== targetBlockId) {
+      setSelectedBlockId(targetBlockId);
+      setSelectedActivityId(String(active.id));
+    }
+  };
+
+  const selectBlock = (block: WorkoutBlock) => {
+    setSelectedBlockId(block.id);
+    setSelectedActivityId(block.activities[0]?.id ?? "");
+  };
+
+  const updateSelectedBlock = (patch: Partial<WorkoutBlock>) => {
+    if (!selectedBlock) return;
+    updateActiveRoutine((routine) => ({
+      ...routine,
+      blocks: routine.blocks.map((block) =>
+        block.id === selectedBlock.id ? { ...block, ...patch } : block,
+      ),
+    }));
+  };
+
+  const addBlock = () => {
+    const blockId = uid("block");
+    const activityId = uid("activity");
+    updateActiveRoutine((routine) => ({
+      ...routine,
+      blocks: [
+        ...routine.blocks,
+        {
+          id: blockId,
+          title: "新环节",
+          rounds: 1,
+          activities: [activity(activityId, "新动作", 40, 20)],
+        },
+      ],
+    }));
+    setSelectedBlockId(blockId);
+    setSelectedActivityId(activityId);
+  };
+
+  const deleteSelectedBlock = () => {
+    if (!selectedBlock || !currentRoutine) return;
+    const blockIndex = currentRoutine.blocks.findIndex((block) => block.id === selectedBlock.id);
+    const nextBlock = currentRoutine.blocks[blockIndex + 1] ?? currentRoutine.blocks[blockIndex - 1];
+    updateActiveRoutine((routine) => ({
+      ...routine,
+      blocks: routine.blocks.filter((block) => block.id !== selectedBlock.id),
+    }));
+    setSelectedBlockId(nextBlock?.id ?? "");
+    setSelectedActivityId(nextBlock?.activities[0]?.id ?? "");
+  };
+
+  const addActivityToSelectedBlock = () => {
+    if (!selectedBlock) return;
+    const activityId = uid("activity");
+    updateActiveRoutine((routine) => ({
+      ...routine,
+      blocks: routine.blocks.map((block) =>
+        block.id === selectedBlock.id
+          ? { ...block, activities: [...block.activities, activity(activityId, "新动作", 40, 20)] }
+          : block,
+      ),
+    }));
+    setSelectedActivityId(activityId);
+  };
+
+  const updateSelectedActivity = (patch: Partial<Activity>) => {
+    if (!selectedBlock || !selectedActivity) return;
+    updateActiveRoutine((routine) => ({
+      ...routine,
+      blocks: routine.blocks.map((block) =>
+        block.id === selectedBlock.id
+          ? {
+              ...block,
+              activities: block.activities.map((item) =>
+                item.id === selectedActivity.id ? { ...item, ...patch } : item,
+              ),
+            }
+          : block,
+      ),
+    }));
+  };
+
+  const duplicateSelectedActivity = () => {
+    if (!selectedBlock || !selectedActivity) return;
+    const activityId = uid("activity");
+    updateActiveRoutine((routine) => ({
+      ...routine,
+      blocks: routine.blocks.map((block) => {
+        if (block.id !== selectedBlock.id) return block;
+        const sourceIndex = block.activities.findIndex((item) => item.id === selectedActivity.id);
+        if (sourceIndex < 0) return block;
+        const activities = [...block.activities];
+        activities.splice(sourceIndex + 1, 0, {
+          ...selectedActivity,
+          id: activityId,
+          name: `${selectedActivity.name}－副本`,
+        });
+        return { ...block, activities };
+      }),
+    }));
+    setSelectedActivityId(activityId);
+  };
+
+  const deleteSelectedActivity = () => {
+    if (!selectedBlock || !selectedActivity) return;
+    const activityIndex = selectedBlock.activities.findIndex((item) => item.id === selectedActivity.id);
+    const nextActivity = selectedBlock.activities[activityIndex + 1] ?? selectedBlock.activities[activityIndex - 1];
+    updateActiveRoutine((routine) => ({
+      ...routine,
+      blocks: routine.blocks.map((block) =>
+        block.id === selectedBlock.id
+          ? { ...block, activities: block.activities.filter((item) => item.id !== selectedActivity.id) }
+          : block,
+      ),
+    }));
+    setSelectedActivityId(nextActivity?.id ?? "");
+  };
+
+  const moveSelectedActivity = (targetBlockId: string) => {
+    if (!selectedBlock || !selectedActivity || targetBlockId === selectedBlock.id) return;
+    updateActiveRoutine((routine) => ({
+      ...routine,
+      blocks: routine.blocks.map((block) => {
+        if (block.id === selectedBlock.id) {
+          return { ...block, activities: block.activities.filter((item) => item.id !== selectedActivity.id) };
+        }
+        if (block.id === targetBlockId) {
+          return { ...block, activities: [...block.activities, selectedActivity] };
+        }
+        return block;
+      }),
+    }));
+    setSelectedBlockId(targetBlockId);
+    setSelectedActivityId(selectedActivity.id);
   };
 
   const addRoutineCopy = () => {
@@ -835,21 +958,28 @@ export default function Home() {
       activeId: copy.id,
       routines: [...previous.routines, copy],
     }));
+    setSelectedBlockId(copy.blocks[0]?.id ?? "");
+    setSelectedActivityId(copy.blocks[0]?.activities[0]?.id ?? "");
   };
 
   const deleteRoutine = () => {
     if (library.routines.length <= 1 || !currentRoutine) return;
     if (!window.confirm(`删除“${currentRoutine.name}”？`)) return;
+    const nextRoutine = library.routines.find((routine) => routine.id !== library.activeId);
     setLibrary((previous) => {
       const routines = previous.routines.filter((routine) => routine.id !== previous.activeId);
       return { routines, activeId: routines[0].id };
     });
+    setSelectedBlockId(nextRoutine?.blocks[0]?.id ?? "");
+    setSelectedActivityId(nextRoutine?.blocks[0]?.activities[0]?.id ?? "");
   };
 
   const resetRoutine = () => {
     if (!currentRoutine || !window.confirm("用默认25分钟方案覆盖当前方案？")) return;
     const replacement = createDefaultRoutine(currentRoutine.id, currentRoutine.name);
     updateActiveRoutine(() => replacement);
+    setSelectedBlockId(replacement.blocks[0].id);
+    setSelectedActivityId(replacement.blocks[0].activities[0]?.id ?? "");
   };
 
   const currentEvent = timeline[currentIndex];
@@ -947,7 +1077,12 @@ export default function Home() {
           <span>当前方案</span>
           <select
             value={library.activeId}
-            onChange={(event) => setLibrary((previous) => ({ ...previous, activeId: event.target.value }))}
+            onChange={(event) => {
+              const nextRoutine = library.routines.find((routine) => routine.id === event.target.value);
+              setLibrary((previous) => ({ ...previous, activeId: event.target.value }));
+              setSelectedBlockId(nextRoutine?.blocks[0]?.id ?? "");
+              setSelectedActivityId(nextRoutine?.blocks[0]?.activities[0]?.id ?? "");
+            }}
           >
             {library.routines.map((routine) => (
               <option key={routine.id} value={routine.id}>{routine.name}</option>
@@ -964,120 +1099,113 @@ export default function Home() {
       <section className="editor-intro">
         <div>
           <span className="section-kicker">训练编排</span>
-          <h2>拖动手柄改变顺序</h2>
+          <h2>选一个，再细调</h2>
         </div>
-        <p>可以拖动整个环节，也可以把动作拖到同一环节的其他位置或另一个环节中。</p>
+        <p>环节和动作都可以横向滑动；按住 ⠿ 拖动排序，点选后只编辑当前一项。</p>
       </section>
 
       {currentRoutine && (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={currentRoutine.blocks.map((block) => block.id)} strategy={verticalListSortingStrategy}>
-            <div className="blocks-list">
-              {currentRoutine.blocks.map((block, index) => (
-                <BlockEditor
-                  key={block.id}
-                  block={block}
-                  tone={index}
-                  onChange={(patch) =>
-                    updateActiveRoutine((routine) => ({
-                      ...routine,
-                      blocks: routine.blocks.map((candidate) =>
-                        candidate.id === block.id ? { ...candidate, ...patch } : candidate,
-                      ),
-                    }))
-                  }
-                  onAddActivity={() =>
-                    updateActiveRoutine((routine) => ({
-                      ...routine,
-                      blocks: routine.blocks.map((candidate) =>
-                        candidate.id === block.id
-                          ? {
-                              ...candidate,
-                              activities: [
-                                ...candidate.activities,
-                                activity(uid("activity"), "新动作", 40, 20, ""),
-                              ],
-                            }
-                          : candidate,
-                      ),
-                    }))
-                  }
-                  onDuplicateActivity={(activityId) =>
-                    updateActiveRoutine((routine) => ({
-                      ...routine,
-                      blocks: routine.blocks.map((candidate) => {
-                        if (candidate.id !== block.id) return candidate;
-                        const indexToCopy = candidate.activities.findIndex((item) => item.id === activityId);
-                        if (indexToCopy < 0) return candidate;
-                        const copy = {
-                          ...candidate.activities[indexToCopy],
-                          id: uid("activity"),
-                          name: `${candidate.activities[indexToCopy].name}－副本`,
-                        };
-                        const activities = [...candidate.activities];
-                        activities.splice(indexToCopy + 1, 0, copy);
-                        return { ...candidate, activities };
-                      }),
-                    }))
-                  }
-                  onDeleteActivity={(activityId) =>
-                    updateActiveRoutine((routine) => ({
-                      ...routine,
-                      blocks: routine.blocks.map((candidate) =>
-                        candidate.id === block.id
-                          ? { ...candidate, activities: candidate.activities.filter((item) => item.id !== activityId) }
-                          : candidate,
-                      ),
-                    }))
-                  }
-                  onUpdateActivity={(activityId, patch) =>
-                    updateActiveRoutine((routine) => ({
-                      ...routine,
-                      blocks: routine.blocks.map((candidate) =>
-                        candidate.id === block.id
-                          ? {
-                              ...candidate,
-                              activities: candidate.activities.map((item) =>
-                                item.id === activityId ? { ...item, ...patch } : item,
-                              ),
-                            }
-                          : candidate,
-                      ),
-                    }))
-                  }
-                  onDeleteBlock={() =>
-                    updateActiveRoutine((routine) => ({
-                      ...routine,
-                      blocks: routine.blocks.filter((candidate) => candidate.id !== block.id),
-                    }))
-                  }
-                />
-              ))}
+          <section className="composer-shell" aria-label="训练编排器">
+            <div className="composer-level">
+              <div className="level-heading">
+                <div>
+                  <span>第一步</span>
+                  <strong>选择或拖动环节</strong>
+                </div>
+                <small>动作可直接拖到另一个环节卡片</small>
+              </div>
+              <SortableContext items={currentRoutine.blocks.map((block) => block.id)} strategy={horizontalListSortingStrategy}>
+                <div className="horizontal-rail block-rail">
+                  {currentRoutine.blocks.map((block, index) => (
+                    <SortableBlockTab
+                      key={block.id}
+                      block={block}
+                      tone={index}
+                      selected={selectedBlock?.id === block.id}
+                      onSelect={() => selectBlock(block)}
+                    />
+                  ))}
+                  <button className="rail-add block-rail-add" type="button" onClick={addBlock}>＋ 新增环节</button>
+                </div>
+              </SortableContext>
             </div>
-          </SortableContext>
+
+            {selectedBlock ? (
+              <>
+                <div className="block-settings">
+                  <label className="block-name-field">
+                    <span>当前环节</span>
+                    <input
+                      aria-label="环节名称"
+                      value={selectedBlock.title}
+                      onChange={(event) => updateSelectedBlock({ title: event.target.value })}
+                    />
+                  </label>
+                  <label className="round-field">
+                    <span>轮数</span>
+                    <input
+                      inputMode="numeric"
+                      min="1"
+                      type="number"
+                      value={selectedBlock.rounds}
+                      onChange={(event) => updateSelectedBlock({ rounds: Math.max(1, Number(event.target.value) || 1) })}
+                    />
+                  </label>
+                  <span className="block-settings-summary">{selectedBlock.activities.length} 个动作 · {formatTime(blockDuration(selectedBlock))}</span>
+                  <button className="danger-link" type="button" onClick={deleteSelectedBlock}>删除环节</button>
+                </div>
+
+                <div className="composer-level activity-level">
+                  <div className="level-heading">
+                    <div>
+                      <span>第二步</span>
+                      <strong>选择或拖动动作</strong>
+                    </div>
+                    <small>左右滑动查看全部</small>
+                  </div>
+                  <SortableContext items={selectedBlock.activities.map((item) => item.id)} strategy={horizontalListSortingStrategy}>
+                    <div className="horizontal-rail activity-rail">
+                      {selectedBlock.activities.map((item) => (
+                        <SortableActivityChip
+                          key={item.id}
+                          blockId={selectedBlock.id}
+                          item={item}
+                          selected={selectedActivity?.id === item.id}
+                          onSelect={() => setSelectedActivityId(item.id)}
+                        />
+                      ))}
+                      <button className="rail-add activity-rail-add" type="button" onClick={addActivityToSelectedBlock}>＋ 新增动作</button>
+                    </div>
+                  </SortableContext>
+                </div>
+
+                {selectedActivity ? (
+                  <SelectedActivityEditor
+                    item={selectedActivity}
+                    blocks={currentRoutine.blocks}
+                    blockId={selectedBlock.id}
+                    onChange={updateSelectedActivity}
+                    onMove={moveSelectedActivity}
+                    onDuplicate={duplicateSelectedActivity}
+                    onDelete={deleteSelectedActivity}
+                  />
+                ) : (
+                  <div className="empty-editor">
+                    <strong>这个环节还没有动作</strong>
+                    <button className="secondary-button" type="button" onClick={addActivityToSelectedBlock}>添加第一个动作</button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="empty-editor">
+                <strong>还没有训练环节</strong>
+                <button className="secondary-button" type="button" onClick={addBlock}>添加第一个环节</button>
+              </div>
+            )}
+          </section>
         </DndContext>
       )}
-
-      <button
-        className="add-block"
-        type="button"
-        onClick={() =>
-          updateActiveRoutine((routine) => ({
-            ...routine,
-            blocks: [
-              ...routine.blocks,
-              {
-                id: uid("block"),
-                title: "新环节",
-                rounds: 1,
-                activities: [activity(uid("activity"), "新动作", 40, 20)],
-              },
-            ],
-          }))
-        }
-      >
-        ＋ 添加训练环节
-      </button>
 
       <aside className="install-note">
         <span className="install-icon">⌂</span>

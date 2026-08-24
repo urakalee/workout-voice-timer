@@ -47,6 +47,9 @@ test("includes configurable timeline, voice, drag-and-drop, and offline support"
 
   assert.match(page, /createDefaultRoutine/);
   assert.match(page, /DndContext/);
+  assert.match(page, /horizontalListSortingStrategy/);
+  assert.match(page, /SelectedActivityEditor/);
+  assert.match(page, /左右滑动查看全部/);
   assert.match(page, /SpeechSynthesisUtterance/);
   assert.match(page, /wakeLock\.request/);
   assert.match(page, /localStorage\.setItem/);
