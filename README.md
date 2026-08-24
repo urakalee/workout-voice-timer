@@ -33,7 +33,7 @@ npm run build:github
 1. 打开仓库的 **Settings → Pages**。
 2. 在 **Build and deployment** 中将 Source 设为 **GitHub Actions**。
 3. 打开 **Actions**，等待 “Deploy to GitHub Pages” 任务完成。
-4. 访问 `https://urakalee.github.io/workout-voice-timer/`。
+4. 访问 `https://life.urakalee.me/workout-voice-timer/`。
 
 以后只需向 `main` 推送代码，线上页面就会自动更新。
 
