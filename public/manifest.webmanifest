@@ -1,0 +1,13 @@
+{
+  "name": "动起来｜语音训练计时器",
+  "short_name": "动起来",
+  "description": "可配置动作、时长、休息和轮数的中文语音训练计时器。",
+  "lang": "zh-CN",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f2e9",
+  "theme_color": "#102f2d",
+  "categories": ["fitness", "health", "utilities"]
+}
