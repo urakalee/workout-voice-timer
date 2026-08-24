@@ -575,8 +575,9 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
-    void navigator.serviceWorker.register("/sw.js");
+    if (!("serviceWorker" in navigator) || window.location.hostname === "localhost") return;
+    const serviceWorkerUrl = new URL("sw.js", window.location.href);
+    void navigator.serviceWorker.register(serviceWorkerUrl.pathname);
   }, []);
 
   const availableVoices = useMemo(() => {

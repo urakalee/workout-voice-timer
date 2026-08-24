@@ -58,10 +58,12 @@ test("includes configurable timeline, voice, drag-and-drop, and offline support"
 
   const manifest = JSON.parse(manifestText);
   assert.equal(manifest.display, "standalone");
-  assert.equal(manifest.start_url, "/");
+  assert.equal(manifest.start_url, ".");
+  assert.equal(manifest.scope, ".");
   assert.equal(manifest.name, "动起来｜语音训练计时器");
 
-  assert.match(serviceWorker, /move-workout-v1/);
+  assert.match(serviceWorker, /move-workout-v2/);
+  assert.match(serviceWorker, /APP_ROOT/);
   assert.match(serviceWorker, /caches\.open/);
   assert.doesNotMatch(packageText, /react-loading-skeleton|site-creator-vinext-starter/);
 });

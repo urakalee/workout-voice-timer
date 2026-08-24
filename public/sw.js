@@ -1,5 +1,6 @@
-const CACHE_NAME = "move-workout-v1";
-const APP_SHELL = ["/", "/manifest.webmanifest"];
+const CACHE_NAME = "move-workout-v2";
+const APP_ROOT = new URL("./", self.location.href).pathname;
+const APP_SHELL = [APP_ROOT, `${APP_ROOT}manifest.webmanifest`];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
@@ -24,10 +25,10 @@ self.addEventListener("fetch", (event) => {
       fetch(request)
         .then((response) => {
           const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("/", copy));
+          caches.open(CACHE_NAME).then((cache) => cache.put(APP_ROOT, copy));
           return response;
         })
-        .catch(() => caches.match("/")),
+        .catch(() => caches.match(APP_ROOT)),
     );
     return;
   }

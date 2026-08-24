@@ -18,6 +18,27 @@ npm run build
 npm test
 ```
 
+GitHub Pages 使用独立的静态构建：
+
+```bash
+npm run build:github
+```
+
+## GitHub Pages 部署
+
+仓库已包含 `.github/workflows/deploy.yml`。推送到 `main` 后，GitHub Actions 会自动安装依赖、构建并发布站点。
+
+首次启用时：
+
+1. 打开仓库的 **Settings → Pages**。
+2. 在 **Build and deployment** 中将 Source 设为 **GitHub Actions**。
+3. 打开 **Actions**，等待 “Deploy to GitHub Pages” 任务完成。
+4. 访问 `https://urakalee.github.io/workout-voice-timer/`。
+
+以后只需向 `main` 推送代码，线上页面就会自动更新。
+
+如果以后绑定自定义域名，请在仓库 **Settings → Secrets and variables → Actions → Variables** 中增加 `SITE_BASE_PATH`，值设为 `/`，再重新运行部署工作流。
+
 ## 主要功能
 
 - 内置严格 25 分钟的默认训练方案
