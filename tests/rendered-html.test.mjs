@@ -32,7 +32,7 @@ test("server-renders the workout application metadata and default plan", async (
   assert.match(html, /<title>动起来｜语音训练计时器<\/title>/);
   assert.match(html, /rel="manifest" href="\/manifest\.webmanifest"/);
   assert.match(html, /property="og:image" content="https:\/\/workout\.example\/og\.png"/);
-  assert.match(html, /25 分钟室内训练/);
+  assert.match(html, /全身精简 25 分钟/);
   assert.match(html, /开始训练/);
   assert.doesNotMatch(html, /codex-preview|SkeletonPreview|Your site is taking shape/);
 });
@@ -47,9 +47,11 @@ test("includes configurable timeline, voice, drag-and-drop, and offline support"
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
 
-  assert.match(page, /createDefaultRoutine/);
+  assert.doesNotMatch(page, /function createDefaultRoutine/);
   assert.match(page, /createSimpleRoutine/);
-  assert.match(page, /使用全身精简版/);
+  assert.match(page, /routines: \[createSimpleRoutine\(\)\]/);
+  assert.match(page, /normalizeRoutineLibrary/);
+  assert.match(page, /LEGACY_BUILT_IN_ROUTINE_IDS/);
   assert.match(page, /五动作循环/);
   const simpleRoutineSource = page.slice(
     page.indexOf("function createSimpleRoutine"),
@@ -102,8 +104,8 @@ test("includes configurable timeline, voice, drag-and-drop, and offline support"
   assert.equal((guides.match(/activityId: "/g) ?? []).length, 19);
   assert.match(diagram, /requestAnimationFrame/);
   assert.match(diagram, /prefers-reduced-motion/);
-  assert.match(page, /原地快走或交替抬膝/);
-  assert.match(page, /健腹轮/);
+  assert.doesNotMatch(page, /activity\("core-wheel"/);
+  assert.doesNotMatch(page, /activity\("circuit-lunge"/);
 
   const manifest = JSON.parse(manifestText);
   assert.equal(manifest.display, "standalone");

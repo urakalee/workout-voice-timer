@@ -108,70 +108,6 @@ const activity = (
   reps = 0,
 ): Activity => ({ id, name, kind, duration, rest, reps, repeat: 1, cue });
 
-function createDefaultRoutine(id = "default-25", name = "25 分钟室内训练"):
-  Routine {
-  return {
-    id,
-    name,
-    updatedAt: Date.now(),
-    blocks: [
-      {
-        id: "block-warmup",
-        title: "动态热身",
-        rounds: 1,
-        activities: [
-          activity("warmup-walk", "原地轻松走", 60, 0, "自然摆臂，逐渐加快步频"),
-          activity("warmup-shoulder", "肩部和手臂活动", 60, 0, "肩膀绕环，配合轻柔摆臂"),
-          activity("warmup-hip", "髋部活动与髋折叠", 60, 0, "臀部向后推，腰背保持稳定"),
-          activity("warmup-squat", "浅蹲与交替后撤步", 60, 0, "膝盖方向与脚尖保持一致"),
-          activity("warmup-step", "加速原地走与无跳开合步", 60, 0, "两个动作各做三十秒"),
-        ],
-      },
-      {
-        id: "block-core",
-        title: "核心训练",
-        rounds: 2,
-        activities: [
-          activity(
-            "core-wheel",
-            "健腹轮",
-            30,
-            60,
-            "短距离慢速完成，腰部不适时改做死虫",
-            "reps",
-            5,
-          ),
-        ],
-      },
-      {
-        id: "block-circuit",
-        title: "徒手循环",
-        rounds: 2,
-        activities: [
-          activity("circuit-march", "原地快走或交替抬膝", 40, 20, "身体直立，腹部轻收"),
-          activity("circuit-squat", "徒手深蹲", 40, 20, "臀部向后下方移动"),
-          activity("circuit-box", "影子拳", 40, 20, "交替出拳，肘部不要锁死"),
-          activity("circuit-lunge", "交替后撤弓步", 40, 20, "不稳时改为后撤点地"),
-          activity("circuit-jack", "无跳开合步", 40, 20, "左右交替侧迈，不需要跳跃"),
-          activity("circuit-push", "墙壁俯卧撑", 40, 20, "身体保持一条直线"),
-        ],
-      },
-      {
-        id: "block-cooldown",
-        title: "放松恢复",
-        rounds: 1,
-        activities: [
-          activity("cooldown-walk", "原地慢走与呼吸", 60, 0, "逐渐放慢步频和呼吸"),
-          activity("cooldown-calf", "小腿拉伸", 60, 0, "左右各三十秒"),
-          activity("cooldown-hip", "大腿前侧或髋前侧拉伸", 60, 0, "左右各三十秒"),
-          activity("cooldown-chest", "胸部和肩部放松", 60, 0, "轻柔活动，全程无疼痛"),
-          activity("cooldown-check", "站立呼吸与身体检查", 60, 0, "确认没有头晕胸闷或异常腰痛"),
-        ],
-      },
-    ],
-  };
-}
-
 function createSimpleRoutine(id = "simple-fullbody-25", name = "全身精简 25 分钟"):
   Routine {
   return {
@@ -218,9 +154,21 @@ function createSimpleRoutine(id = "simple-fullbody-25", name = "全身精简 25 
 }
 
 const DEFAULT_LIBRARY: RoutineLibrary = {
-  activeId: "default-25",
-  routines: [createDefaultRoutine(), createSimpleRoutine()],
+  activeId: "simple-fullbody-25",
+  routines: [createSimpleRoutine()],
 };
+
+const LEGACY_BUILT_IN_ROUTINE_IDS = new Set(["default-25", "simple-25"]);
+
+function normalizeRoutineLibrary(library: RoutineLibrary): RoutineLibrary {
+  const routines = library.routines.filter((routine) => !LEGACY_BUILT_IN_ROUTINE_IDS.has(routine.id));
+  const hasCurrentBuiltIn = routines.some((routine) => routine.id === "simple-fullbody-25");
+  const nextRoutines = hasCurrentBuiltIn ? routines : [createSimpleRoutine(), ...routines];
+  const activeId = nextRoutines.some((routine) => routine.id === library.activeId)
+    ? library.activeId
+    : "simple-fullbody-25";
+  return { activeId, routines: nextRoutines };
+}
 
 const DEFAULT_SETTINGS: VoiceSettings = {
   enabled: true,
@@ -742,8 +690,8 @@ export default function Home() {
   const [remaining, setRemaining] = useState(0);
   const [rhythmBeatLabel, setRhythmBeatLabel] = useState("");
   const [guideOpen, setGuideOpen] = useState(false);
-  const [selectedBlockId, setSelectedBlockId] = useState("block-warmup");
-  const [selectedActivityId, setSelectedActivityId] = useState("warmup-walk");
+  const [selectedBlockId, setSelectedBlockId] = useState("simple-block-warmup");
+  const [selectedActivityId, setSelectedActivityId] = useState("simple-warmup-walk");
   const deadlineRef = useRef(0);
   const announcedRef = useRef<Set<string>>(new Set());
   const activationTokenRef = useRef(0);
@@ -797,10 +745,7 @@ export default function Home() {
         if (storedLibrary) {
           const parsed = JSON.parse(storedLibrary) as RoutineLibrary;
           if (parsed.routines?.length) {
-            const hasSimpleRoutine = parsed.routines.some((routine) => routine.id === "simple-fullbody-25");
-            setLibrary(hasSimpleRoutine
-              ? parsed
-              : { ...parsed, routines: [...parsed.routines, createSimpleRoutine()] });
+            setLibrary(normalizeRoutineLibrary(parsed));
           }
         }
         if (storedSettings) setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(storedSettings) });
@@ -1322,17 +1267,6 @@ export default function Home() {
     setSelectedActivityId(copy.blocks[0]?.activities[0]?.id ?? "");
   };
 
-  const useSimpleRoutine = () => {
-    const existing = library.routines.find((routine) => routine.id === "simple-fullbody-25");
-    const simpleRoutine = existing ?? createSimpleRoutine();
-    setLibrary((previous) => ({
-      activeId: simpleRoutine.id,
-      routines: existing ? previous.routines : [...previous.routines, simpleRoutine],
-    }));
-    setSelectedBlockId(simpleRoutine.blocks[0]?.id ?? "");
-    setSelectedActivityId(simpleRoutine.blocks[0]?.activities[0]?.id ?? "");
-  };
-
   const deleteRoutine = () => {
     if (library.routines.length <= 1 || !currentRoutine) return;
     if (!window.confirm(`删除“${currentRoutine.name}”？`)) return;
@@ -1347,12 +1281,8 @@ export default function Home() {
 
   const resetRoutine = () => {
     if (!currentRoutine) return;
-    const isSimpleRoutine = currentRoutine.id === "simple-fullbody-25";
-    const templateName = isSimpleRoutine ? "全身精简25分钟方案" : "默认25分钟方案";
-    if (!window.confirm(`用${templateName}覆盖当前方案？`)) return;
-    const replacement = isSimpleRoutine
-      ? createSimpleRoutine(currentRoutine.id, currentRoutine.name)
-      : createDefaultRoutine(currentRoutine.id, currentRoutine.name);
+    if (!window.confirm("用全身精简25分钟模板覆盖当前方案？")) return;
+    const replacement = createSimpleRoutine(currentRoutine.id, currentRoutine.name);
     updateActiveRoutine(() => replacement);
     setSelectedBlockId(replacement.blocks[0].id);
     setSelectedActivityId(replacement.blocks[0].activities[0]?.id ?? "");
@@ -1392,11 +1322,12 @@ export default function Home() {
         window.alert("这个文件不是有效的“动起来”备份。");
         return;
       }
-      if (!window.confirm(`导入后将用备份中的 ${parsed.library.routines.length} 个方案覆盖当前内容。继续吗？`)) return;
+      const normalizedLibrary = normalizeRoutineLibrary(parsed.library);
+      if (!window.confirm(`导入后将用备份中的 ${normalizedLibrary.routines.length} 个方案覆盖当前内容。继续吗？`)) return;
 
-      const activeRoutine = parsed.library.routines.find((routine) => routine.id === parsed.library.activeId)
-        ?? parsed.library.routines[0];
-      setLibrary(parsed.library);
+      const activeRoutine = normalizedLibrary.routines.find((routine) => routine.id === normalizedLibrary.activeId)
+        ?? normalizedLibrary.routines[0];
+      setLibrary(normalizedLibrary);
       setSettings(parsed.settings);
       setSelectedBlockId(activeRoutine.blocks[0]?.id ?? "");
       setSelectedActivityId(activeRoutine.blocks[0]?.activities[0]?.id ?? "");
@@ -1546,9 +1477,6 @@ export default function Home() {
           </select>
         </label>
         <div className="toolbar-actions">
-          <button className="simple-plan-button" type="button" onClick={useSimpleRoutine}>
-            使用全身精简版 <span>热身与整理各 5 分钟</span>
-          </button>
           <button className="secondary-button" type="button" onClick={exportBackup}>导出备份</button>
           <button className="secondary-button" type="button" onClick={() => importInputRef.current?.click()}>导入备份</button>
           <input
@@ -1561,7 +1489,7 @@ export default function Home() {
           />
           <button className="secondary-button" type="button" onClick={addRoutineCopy}>复制为新方案</button>
           <button className="secondary-button" type="button" onClick={resetRoutine}>
-            {currentRoutine?.id === "simple-fullbody-25" ? "恢复精简模板" : "恢复默认内容"}
+            恢复全身精简模板
           </button>
           <button className="danger-link" type="button" onClick={deleteRoutine} disabled={library.routines.length <= 1}>删除方案</button>
         </div>

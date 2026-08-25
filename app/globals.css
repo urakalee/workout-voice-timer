@@ -383,26 +383,6 @@ footer {
   background: #fff;
 }
 
-.simple-plan-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border: 0;
-  border-radius: 10px;
-  background: var(--ink);
-  color: #fff;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 900;
-}
-
-.simple-plan-button span {
-  color: #92dac9;
-  font-size: 10px;
-  font-weight: 800;
-}
-
 .danger-link {
   color: #a14335;
 }
