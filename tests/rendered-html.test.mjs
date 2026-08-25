@@ -38,8 +38,10 @@ test("server-renders the workout application metadata and default plan", async (
 });
 
 test("includes configurable timeline, voice, drag-and-drop, and offline support", async () => {
-  const [page, manifestText, serviceWorker, packageText] = await Promise.all([
+  const [page, guides, diagram, manifestText, serviceWorker, packageText] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/exercise-guides.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/movement-diagram.tsx", import.meta.url), "utf8"),
     readFile(new URL("../public/manifest.webmanifest", import.meta.url), "utf8"),
     readFile(new URL("../public/sw.js", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
@@ -56,6 +58,13 @@ test("includes configurable timeline, voice, drag-and-drop, and offline support"
   assert.match(page, /dongqilai-workout-backup/);
   assert.match(page, /导出备份/);
   assert.match(page, /导入备份/);
+  assert.match(page, /ExerciseGuidePanel/);
+  assert.match(guides, /前20秒约80–90步\/分/);
+  assert.match(guides, /无跳开合步：一只脚向右迈一步|右脚向右迈一步/);
+  assert.match(guides, /前臂向下、向后压支撑垫/);
+  assert.equal((guides.match(/activityId: "/g) ?? []).length, 17);
+  assert.match(diagram, /requestAnimationFrame/);
+  assert.match(diagram, /prefers-reduced-motion/);
   assert.match(page, /原地快走或交替抬膝/);
   assert.match(page, /健腹轮/);
 

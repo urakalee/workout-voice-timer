@@ -18,6 +18,8 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { findExerciseGuide, type ExerciseGuide } from "./exercise-guides";
+import { MovementDiagram } from "./movement-diagram";
 
 type ActivityKind = "timed" | "reps";
 
@@ -67,6 +69,7 @@ type WorkoutBackup = {
 
 type TimelineEvent = {
   id: string;
+  activityId: string;
   type: "work" | "rest";
   name: string;
   duration: number;
@@ -287,6 +290,7 @@ function buildTimeline(routine: Routine): TimelineEvent[] {
         for (let set = 1; set <= Math.max(1, item.repeat); set += 1) {
           events.push({
             id: `${block.id}-${round}-${item.id}-${set}-work`,
+            activityId: item.id,
             type: "work",
             name: item.name,
             duration: Math.max(1, item.duration),
@@ -303,6 +307,7 @@ function buildTimeline(routine: Routine): TimelineEvent[] {
           if (item.rest > 0) {
             events.push({
               id: `${block.id}-${round}-${item.id}-${set}-rest`,
+              activityId: item.id,
               type: "rest",
               name: "休息",
               duration: item.rest,
@@ -582,6 +587,40 @@ function SelectedActivityEditor({
   );
 }
 
+function ExerciseGuidePanel({ guide, player = false }: { guide: ExerciseGuide; player?: boolean }) {
+  return (
+    <section className={`exercise-guide ${player ? "player-exercise-guide" : ""}`} aria-label={`${guide.activityName}详细指导`}>
+      <div className="guide-visual">
+        <MovementDiagram visual={guide.visual} label={guide.activityName} />
+        <span>循环示意 · 动作幅度以舒适为准</span>
+      </div>
+      <div className="guide-copy">
+        <span className="guide-kicker">动作指导</span>
+        <h3>{guide.activityName}</h3>
+        <div className="guide-target">
+          <strong>做到什么程度</strong>
+          <p>{guide.target}</p>
+        </div>
+        <ol>
+          {guide.steps.map((step) => <li key={step}>{step}</li>)}
+        </ol>
+        <div className="guide-notes">
+          <p><strong>常见错误</strong>{guide.mistakes}</p>
+          <p><strong>降低难度</strong>{guide.easier}</p>
+        </div>
+        {!player && (
+          <p className="guide-sources">
+            强度参考：
+            <a href="https://www.cdc.gov/physicalactivity/basics/measuring/index.html" target="_blank" rel="noreferrer">CDC 谈话测试</a>
+            <span> · </span>
+            <a href="https://www.heart.org/en/healthy-living/exercise-and-physical-activity/fitness-basics/target-heart-rates" target="_blank" rel="noreferrer">AHA 心率区间</a>
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default function Home() {
   const [library, setLibrary] = useState<RoutineLibrary>(DEFAULT_LIBRARY);
   const [settings, setSettings] = useState<VoiceSettings>(DEFAULT_SETTINGS);
@@ -592,6 +631,7 @@ export default function Home() {
   const [playerStatus, setPlayerStatus] = useState<PlayerStatus>("idle");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [remaining, setRemaining] = useState(0);
+  const [guideOpen, setGuideOpen] = useState(false);
   const [selectedBlockId, setSelectedBlockId] = useState("block-warmup");
   const [selectedActivityId, setSelectedActivityId] = useState("warmup-walk");
   const deadlineRef = useRef(0);
@@ -611,6 +651,9 @@ export default function Home() {
     currentRoutine?.blocks.find((block) => block.id === selectedBlockId) ?? currentRoutine?.blocks[0];
   const selectedActivity =
     selectedBlock?.activities.find((item) => item.id === selectedActivityId) ?? selectedBlock?.activities[0];
+  const selectedGuide = selectedActivity
+    ? findExerciseGuide(selectedActivity.id, selectedActivity.name)
+    : undefined;
   const calculatedTimeline = useMemo(
     () => (currentRoutine ? buildTimeline(currentRoutine) : []),
     [currentRoutine],
@@ -774,6 +817,7 @@ export default function Home() {
 
       const event = sourceTimeline[index];
       setCurrentIndex(index);
+      setGuideOpen(false);
       setRemaining(event.duration);
       deadlineRef.current = Date.now() + event.duration * 1000;
       announcedRef.current = new Set();
@@ -1127,6 +1171,9 @@ export default function Home() {
   };
 
   const currentEvent = timeline[currentIndex];
+  const currentGuide = currentEvent
+    ? findExerciseGuide(currentEvent.activityId, currentEvent.name)
+    : undefined;
   const nextWork = timeline.slice(currentIndex + 1).find((event) => event.type === "work");
   const elapsedBefore = timeline
     .slice(0, currentIndex)
@@ -1135,6 +1182,11 @@ export default function Home() {
   const playerProgress = totalSeconds
     ? Math.min(100, ((elapsedBefore + elapsedCurrent) / totalSeconds) * 100)
     : 0;
+
+  const openCurrentGuide = () => {
+    if (playerStatus === "running") pauseWorkout();
+    setGuideOpen(true);
+  };
 
   return (
     <main className="app-shell">
@@ -1335,15 +1387,18 @@ export default function Home() {
                 </div>
 
                 {selectedActivity ? (
-                  <SelectedActivityEditor
-                    item={selectedActivity}
-                    blocks={currentRoutine.blocks}
-                    blockId={selectedBlock.id}
-                    onChange={updateSelectedActivity}
-                    onMove={moveSelectedActivity}
-                    onDuplicate={duplicateSelectedActivity}
-                    onDelete={deleteSelectedActivity}
-                  />
+                  <>
+                    <SelectedActivityEditor
+                      item={selectedActivity}
+                      blocks={currentRoutine.blocks}
+                      blockId={selectedBlock.id}
+                      onChange={updateSelectedActivity}
+                      onMove={moveSelectedActivity}
+                      onDuplicate={duplicateSelectedActivity}
+                      onDelete={deleteSelectedActivity}
+                    />
+                    {selectedGuide && <ExerciseGuidePanel guide={selectedGuide} />}
+                  </>
                 ) : (
                   <div className="empty-editor">
                     <strong>这个环节还没有动作</strong>
@@ -1410,6 +1465,11 @@ export default function Home() {
                       : "准备完成训练"
                     : currentEvent.cue || "保持平稳呼吸，动作标准优先"}
                 </p>
+                {currentEvent.type === "work" && currentGuide && (
+                  <button className="player-guide-button" type="button" onClick={openCurrentGuide}>
+                    ？动作怎么做
+                  </button>
+                )}
                 <div className="player-controls">
                   <button
                     className="round-control"
@@ -1431,6 +1491,23 @@ export default function Home() {
               </>
             )}
           </div>
+          {guideOpen && currentGuide && (
+            <div className="player-guide-layer">
+              <div className="player-guide-sheet">
+                <div className="player-guide-heading">
+                  <div>
+                    <span>训练已暂停</span>
+                    <strong>看清动作后再继续</strong>
+                  </div>
+                  <button type="button" onClick={() => setGuideOpen(false)} aria-label="关闭动作指导">×</button>
+                </div>
+                <ExerciseGuidePanel guide={currentGuide} player />
+                <button className="close-guide-button" type="button" onClick={() => setGuideOpen(false)}>
+                  关闭指导，返回计时器
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </main>
