@@ -24,6 +24,11 @@ export type ExerciseGuide = {
   mistakes: string;
   easier: string;
   visual: MovementVisual;
+  video?: {
+    url: string;
+    label: string;
+    source: string;
+  };
 };
 
 export type TimedVoiceCue = {
@@ -46,6 +51,11 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     mistakes: "为了追求步数而跺脚、耸肩、身体后仰，或一开始就快速抬膝。",
     easier: "保持80–90步/分，缩小摆臂和抬脚幅度；需要时扶稳固桌面。",
     visual: "march",
+    video: {
+      url: "https://vimeo.com/1113270364/ee0024e627",
+      label: "原地踏步真人示范",
+      source: "NHS 肺康复 Level 1",
+    },
   },
   {
     activityId: "warmup-shoulder",
@@ -55,6 +65,11 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     mistakes: "耸肩憋气、快速甩臂，或把手臂硬拉到疼痛角度。",
     easier: "只做小幅肩胛骨后收和向下放松，手臂保持低于肩高。",
     visual: "shoulders",
+    video: {
+      url: "https://vimeo.com/892939507",
+      label: "肩部热身真人示范",
+      source: "NHS Active Against Cancer",
+    },
   },
   {
     activityId: "warmup-hip",
@@ -73,6 +88,11 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     mistakes: "膝盖向内扣、脚跟抬起，或后撤时把重心全部压到后脚。",
     easier: "浅蹲只下10–20厘米；后撤改为原地脚尖轻点，并扶住椅背。",
     visual: "squat-step",
+    video: {
+      url: "https://vimeo.com/1113270462/43799c2d13",
+      label: "坐站／浅蹲入门示范",
+      source: "NHS 肺康复 Level 1",
+    },
   },
   {
     activityId: "warmup-step",
@@ -82,6 +102,11 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     mistakes: "双脚同时离地、落脚过宽、膝盖锁死，或手臂上举导致耸肩。",
     easier: "侧迈距离缩小，手臂只抬到肩高；需要时不加速原地走。",
     visual: "step-jack",
+    video: {
+      url: "https://vimeo.com/1113270505/f891a0f55c",
+      label: "低强度 Star Jack 示范",
+      source: "NHS 肺康复 Level 1",
+    },
   },
   {
     activityId: "core-wheel",
@@ -100,6 +125,11 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     mistakes: "跺脚、屏住呼吸、身体后仰，或膝盖抬得太高导致腰部紧张。",
     easier: "降低膝盖高度和步频，改成脚尖交替点地。",
     visual: "high-knee",
+    video: {
+      url: "https://vimeo.com/1113270364/ee0024e627",
+      label: "原地踏步真人示范",
+      source: "NHS 肺康复 Level 1",
+    },
   },
   {
     activityId: "circuit-squat",
@@ -109,6 +139,11 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     mistakes: "膝盖内扣、脚跟离地、含胸弓腰，或为了下得深而骨盆卷曲。",
     easier: "在身后放稳固椅子，轻触椅面后站起；也可减小下蹲深度。",
     visual: "squat",
+    video: {
+      url: "https://vimeo.com/1113270462/43799c2d13",
+      label: "坐站／深蹲入门示范",
+      source: "NHS 肺康复 Level 1",
+    },
   },
   {
     activityId: "circuit-box",
@@ -118,6 +153,11 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     mistakes: "肘部打直锁死、耸肩、只甩手臂，或转身过大扭到膝盖。",
     easier: "减慢到每秒约1拳，不转髋，只做小幅交替前伸。",
     visual: "boxing",
+    video: {
+      url: "https://vimeo.com/892938979",
+      label: "影子拳真人示范",
+      source: "NHS Active Against Cancer",
+    },
   },
   {
     activityId: "circuit-lunge",
@@ -127,6 +167,11 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     mistakes: "前膝内扣、步幅太窄像走钢丝、身体前扑，或后脚蹬地代替前腿发力。",
     easier: "改成后撤脚尖点地，不下蹲；或扶墙、扶椅背完成。",
     visual: "reverse-lunge",
+    video: {
+      url: "https://vimeo.com/878221901",
+      label: "弓步真人示范",
+      source: "NHS Active Against Cancer",
+    },
   },
   {
     activityId: "circuit-jack",
@@ -136,6 +181,11 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     mistakes: "变成双脚跳跃、侧迈过宽、膝盖向内扣，或双臂上举时耸肩和塌腰。",
     easier: "侧迈缩小为脚尖点地，手臂只抬到胸口或肩高。",
     visual: "step-jack",
+    video: {
+      url: "https://vimeo.com/1113270505/f891a0f55c",
+      label: "低强度 Star Jack 示范",
+      source: "NHS 肺康复 Level 1",
+    },
   },
   {
     activityId: "circuit-push",
@@ -145,6 +195,11 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     mistakes: "塌腰、头先碰墙、肘部完全张成一条横线，或推起时锁死肘部。",
     easier: "双脚向墙靠近；更难则把脚后移，但先保证身体稳定。",
     visual: "wall-pushup",
+    video: {
+      url: "https://vimeo.com/878233753",
+      label: "墙壁俯卧撑真人示范",
+      source: "NHS Active Against Cancer",
+    },
   },
   {
     activityId: "cooldown-walk",
@@ -154,6 +209,11 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     mistakes: "训练结束立刻站死、憋气，或强迫自己做过深过快的呼吸。",
     easier: "扶住稳固物体，以更小的步幅慢慢走。",
     visual: "slow-march",
+    video: {
+      url: "https://vimeo.com/944382875",
+      label: "原地踏步真人示范",
+      source: "NHS Active Against Cancer",
+    },
   },
   {
     activityId: "cooldown-calf",
@@ -163,6 +223,11 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     mistakes: "后脚外八、脚跟抬起、弹振拉伸，或为了更深而塌腰。",
     easier: "缩短前后脚距离，减少身体前倾。",
     visual: "calf-stretch",
+    video: {
+      url: "https://vimeo.com/892941260",
+      label: "小腿拉伸真人示范",
+      source: "NHS Active Against Cancer",
+    },
   },
   {
     activityId: "cooldown-hip",
@@ -172,6 +237,11 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     mistakes: "拉脚把腰拱起、膝盖向外张，或单脚站立摇晃仍坚持。",
     easier: "用毛巾绕住脚踝，或完全改做扶墙后撤步髋前侧拉伸。",
     visual: "quad-stretch",
+    video: {
+      url: "https://vimeo.com/892937049",
+      label: "大腿前侧拉伸真人示范",
+      source: "NHS Active Against Cancer",
+    },
   },
   {
     activityId: "cooldown-chest",
@@ -181,6 +251,11 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     mistakes: "挺胸变成塌腰、耸肩，或把手臂硬拉得过高。",
     easier: "不握手，只做肩胛骨轻轻后收5秒，再放松。",
     visual: "chest-open",
+    video: {
+      url: "https://vimeo.com/893035689",
+      label: "胸部拉伸真人示范",
+      source: "NHS Active Against Cancer",
+    },
   },
   {
     activityId: "cooldown-check",

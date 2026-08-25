@@ -163,9 +163,54 @@ function createDefaultRoutine(id = "default-25", name = "25 分钟室内训练")
   };
 }
 
+function createSimpleRoutine(id = "simple-25", name = "精简 25 分钟训练"):
+  Routine {
+  return {
+    id,
+    name,
+    updatedAt: Date.now(),
+    blocks: [
+      {
+        id: "simple-block-warmup",
+        title: "熟悉动作与热身",
+        rounds: 1,
+        activities: [
+          activity("simple-warmup-walk", "原地轻松走", 120, 0, "脚步轻，从慢到稍快"),
+          activity("simple-warmup-squat", "徒手深蹲", 60, 0, "先做浅蹲，动作稳定比深度重要"),
+          activity("simple-warmup-jack", "无跳开合步", 60, 0, "小幅侧迈，始终有一只脚着地"),
+          activity("simple-warmup-push", "墙壁俯卧撑", 60, 0, "先站近一些，身体保持一条直线"),
+        ],
+      },
+      {
+        id: "simple-block-main",
+        title: "五动作循环",
+        rounds: 3,
+        activities: [
+          activity("simple-main-march", "原地快走或交替抬膝", 40, 20, "身体直立，保持还能说短句"),
+          activity("simple-main-squat", "徒手深蹲", 40, 20, "臀部向后下方移动"),
+          activity("simple-main-jack", "无跳开合步", 40, 20, "左右交替侧迈，不要跳"),
+          activity("simple-main-push", "墙壁俯卧撑", 40, 20, "腹部轻收，胸口靠近墙"),
+          activity("simple-main-box", "影子拳", 40, 20, "轻快交替出拳，不要锁肘"),
+        ],
+      },
+      {
+        id: "simple-block-cooldown",
+        title: "放松恢复",
+        rounds: 1,
+        activities: [
+          activity("simple-cooldown-walk", "原地慢走与呼吸", 120, 0, "逐渐放慢脚步，让呼吸平稳"),
+          activity("simple-cooldown-calf", "小腿拉伸", 60, 0, "左右各三十秒"),
+          activity("simple-cooldown-chest", "胸部和肩部放松", 60, 0, "轻柔舒展，不要挺腰"),
+          activity("simple-cooldown-check", "站立呼吸与身体检查", 60, 0, "确认没有头晕胸闷或异常疼痛"),
+        ],
+      },
+    ],
+  };
+}
+
 const DEFAULT_LIBRARY: RoutineLibrary = {
   activeId: "default-25",
-  routines: [createDefaultRoutine()],
+  routines: [createDefaultRoutine(), createSimpleRoutine()],
 };
 
 const DEFAULT_SETTINGS: VoiceSettings = {
@@ -592,13 +637,19 @@ function ExerciseGuidePanel({ guide, player = false }: { guide: ExerciseGuide; p
 
   return (
     <section className={`exercise-guide ${player ? "player-exercise-guide" : ""}`} aria-label={`${guide.activityName}详细指导`}>
-      <div className="guide-visual">
-        <MovementDiagram visual={guide.visual} label={guide.activityName} />
-        <span>循环示意 · 动作幅度以舒适为准</span>
-      </div>
       <div className="guide-copy">
         <span className="guide-kicker">动作指导</span>
         <h3>{guide.activityName}</h3>
+        {guide.video && (
+          <a className="video-guide-link" href={guide.video.url} target="_blank" rel="noreferrer">
+            <span className="video-play" aria-hidden="true">▶</span>
+            <span>
+              <strong>看真人视频示范</strong>
+              <small>{guide.video.label} · {guide.video.source}</small>
+            </span>
+            <span className="external-arrow" aria-hidden="true">↗</span>
+          </a>
+        )}
         <div className="guide-target">
           <strong>做到什么程度</strong>
           <p>{guide.target}</p>
@@ -622,8 +673,16 @@ function ExerciseGuidePanel({ guide, player = false }: { guide: ExerciseGuide; p
           <p><strong>常见错误</strong>{guide.mistakes}</p>
           <p><strong>降低难度</strong>{guide.easier}</p>
         </div>
+        <details className="diagram-details">
+          <summary>查看简图（可选）</summary>
+          <div className="guide-visual">
+            <MovementDiagram visual={guide.visual} label={guide.activityName} />
+            <span>循环示意 · 真人视频和文字说明优先</span>
+          </div>
+        </details>
         {!player && (
           <p className="guide-sources">
+            真人示范仅用于先熟悉动作；训练时以本页的低强度版本为准。<br />
             强度参考：
             <a href="https://www.cdc.gov/physicalactivity/basics/measuring/index.html" target="_blank" rel="noreferrer">CDC 谈话测试</a>
             <span> · </span>
@@ -696,7 +755,12 @@ export default function Home() {
         const storedSettings = localStorage.getItem(SETTINGS_KEY);
         if (storedLibrary) {
           const parsed = JSON.parse(storedLibrary) as RoutineLibrary;
-          if (parsed.routines?.length) setLibrary(parsed);
+          if (parsed.routines?.length) {
+            const hasSimpleRoutine = parsed.routines.some((routine) => routine.id === "simple-25");
+            setLibrary(hasSimpleRoutine
+              ? parsed
+              : { ...parsed, routines: [...parsed.routines, createSimpleRoutine()] });
+          }
         }
         if (storedSettings) setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(storedSettings) });
       } catch {
@@ -1137,6 +1201,17 @@ export default function Home() {
     setSelectedActivityId(copy.blocks[0]?.activities[0]?.id ?? "");
   };
 
+  const useSimpleRoutine = () => {
+    const existing = library.routines.find((routine) => routine.id === "simple-25");
+    const simpleRoutine = existing ?? createSimpleRoutine();
+    setLibrary((previous) => ({
+      activeId: simpleRoutine.id,
+      routines: existing ? previous.routines : [...previous.routines, simpleRoutine],
+    }));
+    setSelectedBlockId(simpleRoutine.blocks[0]?.id ?? "");
+    setSelectedActivityId(simpleRoutine.blocks[0]?.activities[0]?.id ?? "");
+  };
+
   const deleteRoutine = () => {
     if (library.routines.length <= 1 || !currentRoutine) return;
     if (!window.confirm(`删除“${currentRoutine.name}”？`)) return;
@@ -1150,8 +1225,13 @@ export default function Home() {
   };
 
   const resetRoutine = () => {
-    if (!currentRoutine || !window.confirm("用默认25分钟方案覆盖当前方案？")) return;
-    const replacement = createDefaultRoutine(currentRoutine.id, currentRoutine.name);
+    if (!currentRoutine) return;
+    const isSimpleRoutine = currentRoutine.id === "simple-25";
+    const templateName = isSimpleRoutine ? "精简25分钟方案" : "默认25分钟方案";
+    if (!window.confirm(`用${templateName}覆盖当前方案？`)) return;
+    const replacement = isSimpleRoutine
+      ? createSimpleRoutine(currentRoutine.id, currentRoutine.name)
+      : createDefaultRoutine(currentRoutine.id, currentRoutine.name);
     updateActiveRoutine(() => replacement);
     setSelectedBlockId(replacement.blocks[0].id);
     setSelectedActivityId(replacement.blocks[0].activities[0]?.id ?? "");
@@ -1294,7 +1374,11 @@ export default function Home() {
           </div>
           <div className="summary-meta">
             <span>{currentRoutine?.blocks.length ?? 0} 个环节</span>
-            <span>{calculatedTimeline.filter((event) => event.type === "work").length} 个动作节点</span>
+            <span>
+              {currentRoutine?.id === "simple-25"
+                ? "主训练 5 种动作"
+                : `${calculatedTimeline.filter((event) => event.type === "work").length} 个动作节点`}
+            </span>
           </div>
           <button className="start-button" type="button" onClick={startWorkout} disabled={!calculatedTimeline.length}>
             <span className="play-symbol">▶</span>
@@ -1321,6 +1405,9 @@ export default function Home() {
           </select>
         </label>
         <div className="toolbar-actions">
+          <button className="simple-plan-button" type="button" onClick={useSimpleRoutine}>
+            使用精简版 <span>主训练 5 个动作</span>
+          </button>
           <button className="secondary-button" type="button" onClick={exportBackup}>导出备份</button>
           <button className="secondary-button" type="button" onClick={() => importInputRef.current?.click()}>导入备份</button>
           <input
@@ -1332,7 +1419,9 @@ export default function Home() {
             aria-label="选择训练备份文件"
           />
           <button className="secondary-button" type="button" onClick={addRoutineCopy}>复制为新方案</button>
-          <button className="secondary-button" type="button" onClick={resetRoutine}>恢复默认内容</button>
+          <button className="secondary-button" type="button" onClick={resetRoutine}>
+            {currentRoutine?.id === "simple-25" ? "恢复精简模板" : "恢复默认内容"}
+          </button>
           <button className="danger-link" type="button" onClick={deleteRoutine} disabled={library.routines.length <= 1}>删除方案</button>
         </div>
       </section>
@@ -1342,7 +1431,7 @@ export default function Home() {
           <span className="section-kicker">训练编排</span>
           <h2>选一个，再细调</h2>
         </div>
-        <p>环节和动作都可以横向滑动；按住 ⠿ 拖动排序，点选后只编辑当前一项。</p>
+        <p>刚开始不必追求动作种类。精简版只用 5 个主训练动作反复练习；环节和动作仍可横向滑动、拖动排序。</p>
       </section>
 
       {currentRoutine && (

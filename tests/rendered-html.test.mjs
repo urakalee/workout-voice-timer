@@ -48,6 +48,15 @@ test("includes configurable timeline, voice, drag-and-drop, and offline support"
   ]);
 
   assert.match(page, /createDefaultRoutine/);
+  assert.match(page, /createSimpleRoutine/);
+  assert.match(page, /使用精简版/);
+  assert.match(page, /五动作循环/);
+  const simpleRoutineSource = page.slice(
+    page.indexOf("function createSimpleRoutine"),
+    page.indexOf("const DEFAULT_LIBRARY"),
+  );
+  assert.doesNotMatch(simpleRoutineSource, /健腹轮/);
+  assert.match(simpleRoutineSource, /rounds: 3/);
   assert.match(page, /DndContext/);
   assert.match(page, /horizontalListSortingStrategy/);
   assert.match(page, /SelectedActivityEditor/);
@@ -59,11 +68,16 @@ test("includes configurable timeline, voice, drag-and-drop, and offline support"
   assert.match(page, /导出备份/);
   assert.match(page, /导入备份/);
   assert.match(page, /ExerciseGuidePanel/);
+  assert.match(page, /看真人视频示范/);
+  assert.match(page, /查看简图（可选）/);
   assert.match(guides, /前20秒约80–90步\/分/);
   assert.match(guides, /无跳开合步：一只脚向右迈一步|右脚向右迈一步/);
   assert.match(guides, /前臂向下、向后压支撑垫/);
   assert.match(guides, /现在切换到交替后撤点地/);
   assert.match(guides, /atFraction: 0\.5/);
+  assert.match(guides, /NHS Active Against Cancer/);
+  assert.match(guides, /NHS 肺康复 Level 1/);
+  assert.ok((guides.match(/video: \{/g) ?? []).length >= 10);
   assert.match(page, /findVoiceGuidance/);
   assert.match(page, /timed-/);
   assert.equal((guides.match(/activityId: "/g) ?? []).length, 17);
