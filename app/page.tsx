@@ -18,7 +18,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { findExerciseGuide, type ExerciseGuide } from "./exercise-guides";
+import { findExerciseGuide, findVoiceGuidance, type ExerciseGuide } from "./exercise-guides";
 import { MovementDiagram } from "./movement-diagram";
 
 type ActivityKind = "timed" | "reps";
@@ -588,6 +588,8 @@ function SelectedActivityEditor({
 }
 
 function ExerciseGuidePanel({ guide, player = false }: { guide: ExerciseGuide; player?: boolean }) {
+  const voiceGuidance = findVoiceGuidance(guide.activityId, guide.activityName);
+
   return (
     <section className={`exercise-guide ${player ? "player-exercise-guide" : ""}`} aria-label={`${guide.activityName}详细指导`}>
       <div className="guide-visual">
@@ -601,6 +603,18 @@ function ExerciseGuidePanel({ guide, player = false }: { guide: ExerciseGuide; p
           <strong>做到什么程度</strong>
           <p>{guide.target}</p>
         </div>
+        {voiceGuidance && (
+          <div className="voice-plan">
+            <strong>训练时会听到</strong>
+            <p><span>开始</span>{voiceGuidance.intro}</p>
+            {voiceGuidance.timedCues?.map((cue) => (
+              <p key={`${cue.atFraction}-${cue.text}`}>
+                <span>{cue.atFraction === 0.5 ? "进行到一半" : `进行到约 ${Math.round(cue.atFraction * 100)}%`}</span>
+                {cue.text}
+              </p>
+            ))}
+          </div>
+        )}
         <ol>
           {guide.steps.map((step) => <li key={step}>{step}</li>)}
         </ol>
@@ -799,7 +813,12 @@ export default function Home() {
         event.kind === "reps"
           ? `${event.reps}次，最长${spokenDuration(event.duration)}`
           : spokenDuration(event.duration);
-      speak(`${round}${set}开始${event.name}，${target}。${event.cue}`);
+      const voiceGuidance = findVoiceGuidance(event.activityId, event.name);
+      const instruction = voiceGuidance?.intro || event.cue;
+      const customCue = voiceGuidance && event.cue && event.cue !== voiceGuidance.legacyCue && event.cue !== voiceGuidance.intro
+        ? `补充提醒，${event.cue}。`
+        : "";
+      speak(`${round}${set}开始${event.name}，${target}。${instruction}。${customCue}`);
     },
     [speak],
   );
@@ -833,7 +852,23 @@ export default function Home() {
       setRemaining(nextRemaining);
 
       const current = timeline[currentIndex];
-      if (current && nextRemaining === 10 && !announcedRef.current.has("ten")) {
+      let spokeTimedCue = false;
+      if (current?.type === "work") {
+        const voiceGuidance = findVoiceGuidance(current.activityId, current.name);
+        const elapsed = current.duration - nextRemaining;
+        const dueCues = (voiceGuidance?.timedCues ?? []).filter((cue, index) => {
+          const key = `timed-${index}`;
+          if (elapsed < current.duration * cue.atFraction || announcedRef.current.has(key)) return false;
+          announcedRef.current.add(key);
+          return true;
+        });
+        const latestCue = dueCues.at(-1);
+        if (latestCue) {
+          speak(latestCue.text);
+          spokeTimedCue = true;
+        }
+      }
+      if (current && current.duration > 15 && !spokeTimedCue && nextRemaining === 10 && !announcedRef.current.has("ten")) {
         announcedRef.current.add("ten");
         speak("还有十秒");
       }

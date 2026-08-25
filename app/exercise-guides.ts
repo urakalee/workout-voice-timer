@@ -26,6 +26,17 @@ export type ExerciseGuide = {
   visual: MovementVisual;
 };
 
+export type TimedVoiceCue = {
+  atFraction: number;
+  text: string;
+};
+
+export type VoiceGuidance = {
+  intro: string;
+  legacyCue: string;
+  timedCues?: TimedVoiceCue[];
+};
+
 export const EXERCISE_GUIDES: ExerciseGuide[] = [
   {
     activityId: "warmup-walk",
@@ -182,8 +193,93 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
   },
 ];
 
+const VOICE_GUIDANCE: Record<string, VoiceGuidance> = {
+  "warmup-walk": {
+    intro: "脚步轻落地，自然摆臂。从轻松速度开始，保持能说完整句子。",
+    legacyCue: "自然摆臂，逐渐加快步频",
+    timedCues: [
+      { atFraction: 1 / 3, text: "现在稍微加快一点，肩颈继续放松。" },
+      { atFraction: 2 / 3, text: "再加快一点。仍然要能轻松说完整句子。" },
+    ],
+  },
+  "warmup-shoulder": {
+    intro: "先做向后的肩绕环，从小圈逐渐放大。肩颈放松，不要甩手臂。",
+    legacyCue: "肩膀绕环，配合轻柔摆臂",
+    timedCues: [{ atFraction: 0.5, text: "现在换成向前绕环，幅度以肩部舒服为准。" }],
+  },
+  "warmup-hip": {
+    intro: "膝盖微屈，臀部向后推，腰背保持稳定。用臀部带动身体回到直立。",
+    legacyCue: "臀部向后推，腰背保持稳定",
+  },
+  "warmup-squat": {
+    intro: "先做浅蹲。臀部向后下方移动，膝盖朝脚尖方向，脚跟不要抬起。",
+    legacyCue: "膝盖方向与脚尖保持一致",
+    timedCues: [{ atFraction: 0.5, text: "现在切换到交替后撤点地。左右交替，重心主要留在前脚。" }],
+  },
+  "warmup-step": {
+    intro: "先加速原地走，脚步保持轻，身体直立。不要一开始就冲得太快。",
+    legacyCue: "两个动作各做三十秒",
+    timedCues: [{ atFraction: 0.5, text: "现在切换到无跳开合步。右脚侧迈、收回，再换左脚，始终有一只脚着地。" }],
+  },
+  "core-wheel": {
+    intro: "健腹轮做短距离慢动作。向前两到三秒，腰背不下沉；回收时前臂向下向后压。",
+    legacyCue: "短距离慢速完成，腰部不适时改做死虫",
+  },
+  "circuit-march": {
+    intro: "身体直立，腹部轻收，左右交替抬膝。脚步轻，保持还能说一个短句。",
+    legacyCue: "身体直立，腹部轻收",
+  },
+  "circuit-squat": {
+    intro: "臀部向后下方移动，膝盖朝第二脚趾方向。下降约两秒，站起一到两秒。",
+    legacyCue: "臀部向后下方移动",
+  },
+  "circuit-box": {
+    intro: "双拳从下巴附近交替送出，另一只手留在面前。接近伸直就收回，不要锁肘。",
+    legacyCue: "交替出拳，肘部不要锁死",
+  },
+  "circuit-lunge": {
+    intro: "一只脚向后迈，前脚掌稳稳压地。身体直立，用前腿和臀部回到站姿，再换边。",
+    legacyCue: "不稳时改为后撤点地",
+  },
+  "circuit-jack": {
+    intro: "右脚侧迈，同时双臂向上画弧；收回后换左侧。不要跳，始终有一只脚着地。",
+    legacyCue: "左右交替侧迈，不需要跳跃",
+  },
+  "circuit-push": {
+    intro: "双手略宽于肩放在墙上，腹部和臀部收紧。胸口靠近墙，再平稳推开。",
+    legacyCue: "身体保持一条直线",
+  },
+  "cooldown-walk": {
+    intro: "继续小步慢走，不要突然停下。逐渐减小步幅和摆臂，让呼吸慢慢平稳。",
+    legacyCue: "逐渐放慢步频和呼吸",
+  },
+  "cooldown-calf": {
+    intro: "先拉伸一侧小腿。后脚脚尖朝前、脚跟压地，身体轻轻向墙靠近。",
+    legacyCue: "左右各三十秒",
+    timedCues: [{ atFraction: 0.5, text: "现在换另一侧小腿。后脚跟继续压住地面。" }],
+  },
+  "cooldown-hip": {
+    intro: "先做一侧大腿前侧或髋前侧拉伸。扶稳，骨盆轻收，不要把腰向前顶。",
+    legacyCue: "左右各三十秒",
+    timedCues: [{ atFraction: 0.5, text: "现在慢慢放开，换另一侧。只需要温和牵拉。" }],
+  },
+  "cooldown-chest": {
+    intro: "肩膀向后向下放松，胸骨轻抬。手臂只向后移动一点，不要挺腰。",
+    legacyCue: "轻柔活动，全程无疼痛",
+  },
+  "cooldown-check": {
+    intro: "放松肩膀，舒适吸气三到四秒，呼气四到六秒。检查是否有头晕、胸闷或异常疼痛。",
+    legacyCue: "确认没有头晕胸闷或异常腰痛",
+  },
+};
+
 export function findExerciseGuide(activityId: string, activityName: string) {
   const normalizedName = activityName.replace(/－副本(?:－副本)*$/, "");
   return EXERCISE_GUIDES.find((guide) => guide.activityId === activityId)
     ?? EXERCISE_GUIDES.find((guide) => guide.activityName === normalizedName);
+}
+
+export function findVoiceGuidance(activityId: string, activityName: string) {
+  const guide = findExerciseGuide(activityId, activityName);
+  return guide ? VOICE_GUIDANCE[guide.activityId] : undefined;
 }
