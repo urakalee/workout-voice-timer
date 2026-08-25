@@ -80,6 +80,7 @@ test("includes configurable timeline, voice, drag-and-drop, and offline support"
   assert.match(guides, /无跳开合步：一只脚向右迈一步|右脚向右迈一步/);
   assert.match(guides, /前臂向下、向后压支撑垫/);
   assert.match(guides, /现在切换到交替后撤点地/);
+  assert.match(guides, /现在改成轻柔摆臂/);
   assert.match(guides, /atFraction: 0\.5/);
   assert.doesNotMatch(guides, /NHS Active Against Cancer|NHS 肺康复 Level 1/);
   assert.match(guides, /PureGym 教练示范/);
@@ -88,9 +89,15 @@ test("includes configurable timeline, voice, drag-and-drop, and offline support"
   assert.ok((guides.match(/video: \{/g) ?? []).length >= 10);
   assert.match(page, /findVoiceGuidance/);
   assert.match(page, /walkingBeatMode/);
-  assert.match(page, /80 → 90 → 100 步\/分/);
-  assert.match(page, /每响一下走一步/);
+  assert.match(page, /动作节拍/);
+  assert.match(page, /按各动作推荐节奏/);
+  assert.match(page, /findExerciseRhythm/);
   assert.match(page, /cadenceBeep/);
+  assert.match(page, /说明结束后，节拍与倒计时同时开始/);
+  assert.match(page, /skipAnnouncement/);
+  assert.match(guides, /EXERCISE_RHYTHMS/);
+  assert.match(guides, /四拍一次，慢慢下/);
+  assert.match(guides, /吸气四拍，呼气六拍/);
   assert.match(page, /timed-/);
   assert.equal((guides.match(/activityId: "/g) ?? []).length, 19);
   assert.match(diagram, /requestAnimationFrame/);

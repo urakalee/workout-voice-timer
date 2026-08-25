@@ -931,6 +931,27 @@ footer {
   font-weight: 900;
 }
 
+.rhythm-plan {
+  margin-top: 10px;
+  padding: 10px 13px;
+  border-radius: 10px;
+  background: rgba(146, 218, 201, 0.14);
+  color: #36534d;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.rhythm-plan strong {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--mint-dark);
+  font-size: 11px;
+}
+
+.rhythm-plan p {
+  margin: 0;
+}
+
 .guide-copy ol {
   display: grid;
   gap: 5px;
@@ -1256,6 +1277,10 @@ footer {
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
   cursor: pointer;
+}
+
+.preparing-control {
+  font-size: 15px;
 }
 
 .round-control {

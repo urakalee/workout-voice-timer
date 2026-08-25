@@ -18,7 +18,13 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { findExerciseGuide, findVoiceGuidance, type ExerciseGuide } from "./exercise-guides";
+import {
+  findExerciseGuide,
+  findExerciseRhythm,
+  findVoiceGuidance,
+  type ExerciseGuide,
+  type ExerciseRhythm,
+} from "./exercise-guides";
 import { MovementDiagram } from "./movement-diagram";
 
 type ActivityKind = "timed" | "reps";
@@ -87,7 +93,7 @@ type TimelineEvent = {
   nextName?: string;
 };
 
-type PlayerStatus = "idle" | "running" | "paused" | "complete";
+type PlayerStatus = "idle" | "preparing" | "running" | "paused" | "complete";
 
 const STORAGE_KEY = "move-voice-workout-library-v1";
 const SETTINGS_KEY = "move-voice-workout-settings-v1";
@@ -221,11 +227,6 @@ const DEFAULT_SETTINGS: VoiceSettings = {
   rate: 1,
   voiceURI: "",
   walkingBeatMode: "standard",
-};
-
-const WALKING_CADENCE_PLANS: Record<Exclude<WalkingBeatMode, "off">, readonly [number, number, number]> = {
-  gentle: [70, 80, 90],
-  standard: [80, 90, 100],
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -408,15 +409,17 @@ function spokenDuration(totalSeconds: number) {
   return `${seconds}秒`;
 }
 
-function walkingCadencePlan(mode: WalkingBeatMode) {
-  return mode === "off" ? null : WALKING_CADENCE_PLANS[mode];
+function rhythmBpmSetting(rhythm: ExerciseRhythm, mode: WalkingBeatMode) {
+  if (mode === "off") return null;
+  return mode === "gentle" ? rhythm.gentleBpm : rhythm.standardBpm;
 }
 
-function walkingCadenceAt(mode: WalkingBeatMode, elapsed: number, duration: number) {
-  const plan = walkingCadencePlan(mode);
-  if (!plan) return null;
+function rhythmBpmAt(rhythm: ExerciseRhythm, mode: WalkingBeatMode, elapsed: number, duration: number) {
+  const setting = rhythmBpmSetting(rhythm, mode);
+  if (setting === null) return null;
+  if (typeof setting === "number") return setting;
   const fraction = duration > 0 ? elapsed / duration : 0;
-  return plan[fraction >= 2 / 3 ? 2 : fraction >= 1 / 3 ? 1 : 0];
+  return setting[fraction >= 2 / 3 ? 2 : fraction >= 1 / 3 ? 1 : 0];
 }
 
 function blockDuration(block: WorkoutBlock) {
@@ -658,6 +661,7 @@ function SelectedActivityEditor({
 
 function ExerciseGuidePanel({ guide, player = false }: { guide: ExerciseGuide; player?: boolean }) {
   const voiceGuidance = findVoiceGuidance(guide.activityId, guide.activityName);
+  const rhythm = findExerciseRhythm(guide.activityId, guide.activityName);
 
   return (
     <section className={`exercise-guide ${player ? "player-exercise-guide" : ""}`} aria-label={`${guide.activityName}详细指导`}>
@@ -688,6 +692,12 @@ function ExerciseGuidePanel({ guide, player = false }: { guide: ExerciseGuide; p
                 {cue.text}
               </p>
             ))}
+          </div>
+        )}
+        {rhythm && (
+          <div className="rhythm-plan">
+            <strong>动作节奏</strong>
+            <p>{rhythm.spokenPattern}：{rhythm.pattern.join(" → ")}</p>
           </div>
         )}
         <ol>
@@ -730,13 +740,17 @@ export default function Home() {
   const [playerStatus, setPlayerStatus] = useState<PlayerStatus>("idle");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [remaining, setRemaining] = useState(0);
+  const [rhythmBeatLabel, setRhythmBeatLabel] = useState("");
   const [guideOpen, setGuideOpen] = useState(false);
   const [selectedBlockId, setSelectedBlockId] = useState("block-warmup");
   const [selectedActivityId, setSelectedActivityId] = useState("warmup-walk");
   const deadlineRef = useRef(0);
   const announcedRef = useRef<Set<string>>(new Set());
+  const activationTokenRef = useRef(0);
+  const beginEventTimingRef = useRef<(() => void) | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const nextCadenceBeatRef = useRef(0);
+  const rhythmBeatIndexRef = useRef(0);
   const wakeLockRef = useRef<{ release: () => Promise<void>; released?: boolean } | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -829,15 +843,24 @@ export default function Home() {
   }, [voices]);
 
   const speak = useCallback(
-    (text: string) => {
-      if (!settings.enabled || !("speechSynthesis" in window) || !text) return;
+    (text: string, onDone?: () => void) => {
+      if (!settings.enabled || !("speechSynthesis" in window) || !text) return false;
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = "zh-CN";
       utterance.rate = settings.rate;
       const selected = voices.find((voice) => voice.voiceURI === settings.voiceURI);
       if (selected) utterance.voice = selected;
+      let finished = false;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        onDone?.();
+      };
+      utterance.onend = finish;
+      utterance.onerror = finish;
       window.speechSynthesis.speak(utterance);
+      return true;
     },
     [settings, voices],
   );
@@ -857,14 +880,14 @@ export default function Home() {
     oscillator.stop(context.currentTime + 0.14);
   }, []);
 
-  const cadenceBeep = useCallback(() => {
+  const cadenceBeep = useCallback((accent = false) => {
     const context = audioContextRef.current;
     if (!context) return;
     const oscillator = context.createOscillator();
     const gain = context.createGain();
-    oscillator.frequency.value = 520;
+    oscillator.frequency.value = accent ? 660 : 480;
     gain.gain.setValueAtTime(0.0001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.055, context.currentTime + 0.004);
+    gain.gain.exponentialRampToValueAtTime(accent ? 0.075 : 0.045, context.currentTime + 0.004);
     gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.055);
     oscillator.connect(gain);
     gain.connect(context.destination);
@@ -907,10 +930,9 @@ export default function Home() {
   }, [playerOpen, playerStatus, requestWakeLock]);
 
   const announceEvent = useCallback(
-    (event: TimelineEvent) => {
+    (event: TimelineEvent, onDone?: () => void) => {
       if (event.type === "rest") {
-        speak(`休息${spokenDuration(event.duration)}。${event.nextName ? `下一个动作，${event.nextName}` : "准备结束训练"}`);
-        return;
+        return speak(`休息${spokenDuration(event.duration)}。${event.nextName ? `下一个动作，${event.nextName}` : "准备结束训练"}`, onDone);
       }
 
       const round = event.roundTotal > 1 ? `第${event.round}轮。` : "";
@@ -921,16 +943,16 @@ export default function Home() {
           : spokenDuration(event.duration);
       const voiceGuidance = findVoiceGuidance(event.activityId, event.name);
       const instruction = voiceGuidance?.intro || event.cue;
-      const cadencePlan = voiceGuidance && findExerciseGuide(event.activityId, event.name)?.activityId === "warmup-walk"
-        ? walkingCadencePlan(settings.walkingBeatMode)
-        : null;
-      const cadenceInstruction = cadencePlan
-        ? `节拍从每分钟${cadencePlan[0]}步开始，每响一下走一步。`
+      const rhythm = findExerciseRhythm(event.activityId, event.name);
+      const rhythmSetting = rhythm ? rhythmBpmSetting(rhythm, settings.walkingBeatMode) : null;
+      const startingBpm = Array.isArray(rhythmSetting) ? rhythmSetting[0] : rhythmSetting;
+      const cadenceInstruction = rhythm && startingBpm
+        ? `动作节奏从每分钟${startingBpm}拍开始。${rhythm.spokenPattern}。每轮较高的提示音是第一拍。`
         : "";
       const customCue = voiceGuidance && event.cue && event.cue !== voiceGuidance.legacyCue && event.cue !== voiceGuidance.intro
         ? `补充提醒，${event.cue}。`
         : "";
-      speak(`${round}${set}开始${event.name}，${target}。${instruction}。${cadenceInstruction}${customCue}`);
+      return speak(`${round}${set}开始${event.name}，${target}。${instruction}。${cadenceInstruction}${customCue}`, onDone);
     },
     [settings.walkingBeatMode, speak],
   );
@@ -938,6 +960,8 @@ export default function Home() {
   const activateEvent = useCallback(
     (index: number, sourceTimeline = timeline) => {
       if (index >= sourceTimeline.length) {
+        activationTokenRef.current += 1;
+        beginEventTimingRef.current = null;
         setPlayerStatus("complete");
         setRemaining(0);
         speak("训练完成。做得很好，请慢慢恢复呼吸");
@@ -947,12 +971,24 @@ export default function Home() {
       }
 
       const event = sourceTimeline[index];
+      const activationToken = activationTokenRef.current + 1;
+      activationTokenRef.current = activationToken;
       setCurrentIndex(index);
       setGuideOpen(false);
       setRemaining(event.duration);
-      deadlineRef.current = Date.now() + event.duration * 1000;
+      setRhythmBeatLabel("");
       announcedRef.current = new Set();
-      announceEvent(event);
+      setPlayerStatus("preparing");
+      let timingStarted = false;
+      const beginTiming = () => {
+        if (timingStarted || activationTokenRef.current !== activationToken) return;
+        timingStarted = true;
+        beginEventTimingRef.current = null;
+        deadlineRef.current = Date.now() + event.duration * 1000;
+        setPlayerStatus("running");
+      };
+      beginEventTimingRef.current = beginTiming;
+      if (!announceEvent(event, beginTiming)) beginTiming();
     },
     [announceEvent, beep, releaseWakeLock, speak, timeline],
   );
@@ -976,12 +1012,11 @@ export default function Home() {
         });
         const latestCue = dueCues.at(-1);
         if (latestCue) {
-          const cadencePlan = findExerciseGuide(current.activityId, current.name)?.activityId === "warmup-walk"
-            ? walkingCadencePlan(settings.walkingBeatMode)
-            : null;
+          const rhythm = findExerciseRhythm(current.activityId, current.name);
+          const rhythmSetting = rhythm ? rhythmBpmSetting(rhythm, settings.walkingBeatMode) : null;
           const cadenceIndex = latestCue.atFraction >= 2 / 3 ? 2 : latestCue.atFraction >= 1 / 3 ? 1 : 0;
-          speak(cadencePlan
-            ? `现在节拍调整为每分钟${cadencePlan[cadenceIndex]}步。每响一下走一步；仍要能够轻松说完整句子。`
+          speak(Array.isArray(rhythmSetting)
+            ? `现在节拍调整为每分钟${rhythmSetting[cadenceIndex]}拍。${rhythm?.spokenPattern}。`
             : latestCue.text);
           spokeTimedCue = true;
         }
@@ -1002,23 +1037,24 @@ export default function Home() {
   useEffect(() => {
     if (!playerOpen || playerStatus !== "running") return;
     const current = timeline[currentIndex];
-    if (
-      !current ||
-      current.type !== "work" ||
-      findExerciseGuide(current.activityId, current.name)?.activityId !== "warmup-walk" ||
-      settings.walkingBeatMode === "off"
-    ) return;
+    if (!current || current.type !== "work" || settings.walkingBeatMode === "off") return;
+    const rhythm = findExerciseRhythm(current.activityId, current.name);
+    if (!rhythm) return;
 
     nextCadenceBeatRef.current = Date.now();
+    rhythmBeatIndexRef.current = 0;
     const timer = window.setInterval(() => {
       const now = Date.now();
       if (now < nextCadenceBeatRef.current) return;
       const elapsed = Math.max(0, current.duration - Math.max(0, (deadlineRef.current - now) / 1000));
-      const cadence = walkingCadenceAt(settings.walkingBeatMode, elapsed, current.duration);
-      if (!cadence) return;
-      cadenceBeep();
-      nextCadenceBeatRef.current += 60_000 / cadence;
-      if (nextCadenceBeatRef.current < now) nextCadenceBeatRef.current = now + 60_000 / cadence;
+      const bpm = rhythmBpmAt(rhythm, settings.walkingBeatMode, elapsed, current.duration);
+      if (!bpm) return;
+      const patternIndex = rhythmBeatIndexRef.current % rhythm.pattern.length;
+      setRhythmBeatLabel(rhythm.pattern[patternIndex] ?? "");
+      cadenceBeep(patternIndex === 0);
+      rhythmBeatIndexRef.current += 1;
+      nextCadenceBeatRef.current += 60_000 / bpm;
+      if (nextCadenceBeatRef.current < now) nextCadenceBeatRef.current = now + 60_000 / bpm;
     }, 25);
     return () => window.clearInterval(timer);
   }, [cadenceBeep, currentIndex, playerOpen, playerStatus, settings.walkingBeatMode, timeline]);
@@ -1040,7 +1076,7 @@ export default function Home() {
     void audioContextRef.current?.resume();
     setTimeline(calculatedTimeline);
     setPlayerOpen(true);
-    setPlayerStatus("running");
+    setPlayerStatus("preparing");
     void requestWakeLock();
     activateEvent(0, calculatedTimeline);
   };
@@ -1059,7 +1095,14 @@ export default function Home() {
     void requestWakeLock();
   };
 
+  const skipAnnouncement = () => {
+    window.speechSynthesis?.cancel();
+    beginEventTimingRef.current?.();
+  };
+
   const closePlayer = () => {
+    activationTokenRef.current += 1;
+    beginEventTimingRef.current = null;
     setPlayerOpen(false);
     setPlayerStatus("idle");
     window.speechSynthesis?.cancel();
@@ -1372,9 +1415,11 @@ export default function Home() {
     .slice(0, currentIndex)
     .reduce((sum, event) => sum + event.duration, 0);
   const elapsedCurrent = currentEvent ? currentEvent.duration - remaining : 0;
-  const currentCadence = currentEvent?.type === "work" &&
-    findExerciseGuide(currentEvent.activityId, currentEvent.name)?.activityId === "warmup-walk"
-    ? walkingCadenceAt(settings.walkingBeatMode, elapsedCurrent, currentEvent.duration)
+  const currentRhythm = currentEvent?.type === "work"
+    ? findExerciseRhythm(currentEvent.activityId, currentEvent.name)
+    : undefined;
+  const currentRhythmBpm = currentEvent && currentRhythm
+    ? rhythmBpmAt(currentRhythm, settings.walkingBeatMode, elapsedCurrent, currentEvent.duration)
     : null;
   const playerProgress = totalSeconds
     ? Math.min(100, ((elapsedBefore + elapsedCurrent) / totalSeconds) * 100)
@@ -1433,7 +1478,7 @@ export default function Home() {
                 />
               </label>
               <label>
-                <span>原地走节拍</span>
+                <span>动作节拍</span>
                 <select
                   value={settings.walkingBeatMode}
                   onChange={(event) => setSettings((previous) => ({
@@ -1441,8 +1486,8 @@ export default function Home() {
                     walkingBeatMode: event.target.value as WalkingBeatMode,
                   }))}
                 >
-                  <option value="standard">标准：80 → 90 → 100 步/分</option>
-                  <option value="gentle">舒缓：70 → 80 → 90 步/分</option>
+                  <option value="standard">标准：按各动作推荐节奏</option>
+                  <option value="gentle">舒缓：所有动作稍慢一些</option>
                   <option value="off">关闭节拍，只听语音</option>
                 </select>
               </label>
@@ -1679,18 +1724,20 @@ export default function Home() {
                 )}
                 <div className="countdown" aria-live="polite">{formatTime(remaining)}</div>
                 <p className="current-cue">
-                  {currentEvent.type === "rest"
+                  {playerStatus === "preparing"
+                    ? "正在播放说明，结束后开始计时"
+                    : currentEvent.type === "rest"
                     ? nextWork
                       ? `下一个：${nextWork.name}`
                       : "准备完成训练"
                     : currentEvent.cue || "保持平稳呼吸，动作标准优先"}
                 </p>
-                {currentCadence && (
+                {currentRhythmBpm && currentRhythm && (
                   <p className="cadence-status">
-                    <strong>{currentCadence}</strong> 步/分 · 每响一下走一步
+                    <strong>{currentRhythmBpm}</strong> 拍/分 · {rhythmBeatLabel || currentRhythm.spokenPattern}
                   </p>
                 )}
-                {currentEvent.type === "work" && currentGuide && (
+                {currentEvent.type === "work" && currentGuide && playerStatus !== "preparing" && (
                   <button className="player-guide-button" type="button" onClick={openCurrentGuide}>
                     ？动作怎么做
                   </button>
@@ -1705,14 +1752,22 @@ export default function Home() {
                   >
                     ‹
                   </button>
-                  {playerStatus === "paused" ? (
+                  {playerStatus === "preparing" ? (
+                    <button className="pause-control preparing-control" type="button" onClick={skipAnnouncement} aria-label="跳过说明并开始">跳过</button>
+                  ) : playerStatus === "paused" ? (
                     <button className="pause-control" type="button" onClick={resumeWorkout}>▶</button>
                   ) : (
                     <button className="pause-control" type="button" onClick={pauseWorkout}>Ⅱ</button>
                   )}
                   <button className="round-control" type="button" onClick={() => activateEvent(currentIndex + 1)} aria-label="下一项">›</button>
                 </div>
-                <span className="player-hint">{playerStatus === "paused" ? "训练已暂停" : "屏幕将尽量保持常亮"}</span>
+                <span className="player-hint">
+                  {playerStatus === "preparing"
+                    ? "说明结束后，节拍与倒计时同时开始"
+                    : playerStatus === "paused"
+                      ? "训练已暂停"
+                      : "屏幕将尽量保持常亮"}
+                </span>
               </>
             )}
           </div>

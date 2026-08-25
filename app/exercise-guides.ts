@@ -42,11 +42,18 @@ export type VoiceGuidance = {
   timedCues?: TimedVoiceCue[];
 };
 
+export type ExerciseRhythm = {
+  standardBpm: number | readonly [number, number, number];
+  gentleBpm: number | readonly [number, number, number];
+  pattern: readonly string[];
+  spokenPattern: string;
+};
+
 export const EXERCISE_GUIDES: ExerciseGuide[] = [
   {
     activityId: "warmup-walk",
     activityName: "原地轻松走",
-    target: "把动作时长平均分成三段。标准节拍为80、90、100步/分；如果跟起来紧张，可在语音设置中选择70、80、90步/分。仍能轻松说完整句子，主观强度约2–3/10；热身不必把心率推到125。",
+    target: "把动作时长平均分成三段。标准节拍为80、90、100步/分；如果跟起来紧张，可在动作节拍中选择舒缓模式。仍能轻松说完整句子，主观强度约2–3/10；热身不必把心率推到125。",
     steps: ["站直但不挺胸，双脚落在髋部正下方。", "每响一下走一步，左右脚交替；进入下一段时按语音提示稍微加快。", "肩颈保持放松，呼吸比静止时稍快即可；跟不上时直接慢下来，不必追赶节拍。"],
     mistakes: "为了追求步数而跺脚、耸肩、身体后仰，或一开始就快速抬膝。",
     easier: "保持80–90步/分，缩小摆臂和抬脚幅度；需要时扶稳固桌面。",
@@ -55,7 +62,7 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
   {
     activityId: "warmup-shoulder",
     activityName: "肩部和手臂活动",
-    target: "慢速肩绕环：向后4–6圈、向前4–6圈；随后轻柔摆臂。全程不应夹痛或麻木。",
+    target: "把时间分成三等段：先向后慢速绕环，再向前慢速绕环，最后轻柔摆臂。全程不应夹痛或麻木。",
     steps: ["双脚与髋同宽，膝盖放松。", "肩膀先向上、向后、向下画小圈，再逐渐放大。", "手臂摆动来自肩关节，不甩手腕。"],
     mistakes: "耸肩憋气、快速甩臂，或把手臂硬拉到疼痛角度。",
     easier: "只做小幅肩胛骨后收和向下放松，手臂保持低于肩高。",
@@ -281,7 +288,10 @@ const VOICE_GUIDANCE: Record<string, VoiceGuidance> = {
   "warmup-shoulder": {
     intro: "先做向后的肩绕环，从小圈逐渐放大。肩颈放松，不要甩手臂。",
     legacyCue: "肩膀绕环，配合轻柔摆臂",
-    timedCues: [{ atFraction: 0.5, text: "现在换成向前绕环，幅度以肩部舒服为准。" }],
+    timedCues: [
+      { atFraction: 1 / 3, text: "现在换成向前绕环，幅度以肩部舒服为准。" },
+      { atFraction: 2 / 3, text: "现在改成轻柔摆臂。肩颈继续放松，不要用力甩。" },
+    ],
   },
   "warmup-hip": {
     intro: "膝盖微屈，臀部向后推，腰背保持稳定。用臀部带动身体回到直立。",
@@ -336,6 +346,10 @@ const VOICE_GUIDANCE: Record<string, VoiceGuidance> = {
   "cooldown-walk": {
     intro: "继续小步慢走，不要突然停下。逐渐减小步幅和摆臂，让呼吸慢慢平稳。",
     legacyCue: "逐渐放慢步频和呼吸",
+    timedCues: [
+      { atFraction: 1 / 3, text: "现在稍微放慢一点，继续小步走。" },
+      { atFraction: 2 / 3, text: "再放慢一点，让呼吸逐渐平稳。" },
+    ],
   },
   "cooldown-calf": {
     intro: "先拉伸一侧小腿。后脚脚尖朝前、脚跟压地，身体轻轻向墙靠近。",
@@ -357,6 +371,75 @@ const VOICE_GUIDANCE: Record<string, VoiceGuidance> = {
   },
 };
 
+const EXERCISE_RHYTHMS: Record<string, ExerciseRhythm> = {
+  "warmup-walk": {
+    standardBpm: [80, 90, 100],
+    gentleBpm: [70, 80, 90],
+    pattern: ["交替踏步"],
+    spokenPattern: "每响一下走一步",
+  },
+  "circuit-march": {
+    standardBpm: 100,
+    gentleBpm: 90,
+    pattern: ["左步", "右步"],
+    spokenPattern: "每响一下换一只脚",
+  },
+  "circuit-squat": {
+    standardBpm: 60,
+    gentleBpm: 50,
+    pattern: ["下", "下", "起", "站稳"],
+    spokenPattern: "四拍一次，慢慢下、继续下、站起、站稳",
+  },
+  "circuit-box": {
+    standardBpm: 90,
+    gentleBpm: 75,
+    pattern: ["左拳", "右拳"],
+    spokenPattern: "每响一下换一只手出拳",
+  },
+  "circuit-lunge": {
+    standardBpm: 60,
+    gentleBpm: 50,
+    pattern: ["后撤", "下沉", "站起", "换边"],
+    spokenPattern: "四拍一次，后撤、下沉、站起、换边",
+  },
+  "circuit-jack": {
+    standardBpm: 80,
+    gentleBpm: 70,
+    pattern: ["右侧", "收回", "左侧", "收回"],
+    spokenPattern: "按右侧、收回、左侧、收回的四拍循环",
+  },
+  "circuit-push": {
+    standardBpm: 60,
+    gentleBpm: 50,
+    pattern: ["靠近", "靠近", "推开", "推稳"],
+    spokenPattern: "四拍一次，慢慢靠近、继续靠近、推开、推稳",
+  },
+  "simple-glute-bridge": {
+    standardBpm: 60,
+    gentleBpm: 50,
+    pattern: ["抬", "抬", "停", "降", "降"],
+    spokenPattern: "五拍一次，抬起两拍、停一拍、下降两拍",
+  },
+  "simple-bird-dog": {
+    standardBpm: 60,
+    gentleBpm: 50,
+    pattern: ["伸出", "伸出", "稳定", "稳定", "收回", "换边"],
+    spokenPattern: "六拍一侧，伸出两拍、稳定两拍、收回、换边",
+  },
+  "cooldown-walk": {
+    standardBpm: [90, 80, 70],
+    gentleBpm: [80, 70, 60],
+    pattern: ["交替踏步"],
+    spokenPattern: "每响一下走一步，跟随节拍逐渐放慢",
+  },
+  "cooldown-check": {
+    standardBpm: 60,
+    gentleBpm: 50,
+    pattern: ["吸气", "吸气", "吸气", "吸气", "呼气", "呼气", "呼气", "呼气", "呼气", "呼气"],
+    spokenPattern: "吸气四拍，呼气六拍",
+  },
+};
+
 export function findExerciseGuide(activityId: string, activityName: string) {
   const normalizedName = activityName.replace(/－副本(?:－副本)*$/, "");
   return EXERCISE_GUIDES.find((guide) => guide.activityId === activityId)
@@ -366,4 +449,9 @@ export function findExerciseGuide(activityId: string, activityName: string) {
 export function findVoiceGuidance(activityId: string, activityName: string) {
   const guide = findExerciseGuide(activityId, activityName);
   return guide ? VOICE_GUIDANCE[guide.activityId] : undefined;
+}
+
+export function findExerciseRhythm(activityId: string, activityName: string) {
+  const guide = findExerciseGuide(activityId, activityName);
+  return guide ? EXERCISE_RHYTHMS[guide.activityId] : undefined;
 }
