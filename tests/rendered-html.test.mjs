@@ -49,13 +49,19 @@ test("includes configurable timeline, voice, drag-and-drop, and offline support"
 
   assert.match(page, /createDefaultRoutine/);
   assert.match(page, /createSimpleRoutine/);
-  assert.match(page, /使用精简版/);
+  assert.match(page, /使用全身精简版/);
   assert.match(page, /五动作循环/);
   const simpleRoutineSource = page.slice(
     page.indexOf("function createSimpleRoutine"),
     page.indexOf("const DEFAULT_LIBRARY"),
   );
   assert.doesNotMatch(simpleRoutineSource, /健腹轮/);
+  assert.doesNotMatch(simpleRoutineSource, /髋折叠/);
+  assert.match(simpleRoutineSource, /臀桥/);
+  assert.match(simpleRoutineSource, /鸟狗式/);
+  assert.match(simpleRoutineSource, /影子拳/);
+  assert.match(simpleRoutineSource, /熟悉动作与热身/);
+  assert.match(simpleRoutineSource, /放松恢复/);
   assert.match(simpleRoutineSource, /rounds: 3/);
   assert.match(page, /DndContext/);
   assert.match(page, /horizontalListSortingStrategy/);
@@ -75,12 +81,14 @@ test("includes configurable timeline, voice, drag-and-drop, and offline support"
   assert.match(guides, /前臂向下、向后压支撑垫/);
   assert.match(guides, /现在切换到交替后撤点地/);
   assert.match(guides, /atFraction: 0\.5/);
-  assert.match(guides, /NHS Active Against Cancer/);
-  assert.match(guides, /NHS 肺康复 Level 1/);
+  assert.doesNotMatch(guides, /NHS Active Against Cancer|NHS 肺康复 Level 1/);
+  assert.match(guides, /PureGym 教练示范/);
+  assert.match(guides, /NASM 教练示范/);
+  assert.match(guides, /Mayo Clinic/);
   assert.ok((guides.match(/video: \{/g) ?? []).length >= 10);
   assert.match(page, /findVoiceGuidance/);
   assert.match(page, /timed-/);
-  assert.equal((guides.match(/activityId: "/g) ?? []).length, 17);
+  assert.equal((guides.match(/activityId: "/g) ?? []).length, 19);
   assert.match(diagram, /requestAnimationFrame/);
   assert.match(diagram, /prefers-reduced-motion/);
   assert.match(page, /原地快走或交替抬膝/);

@@ -23,7 +23,7 @@ export type ExerciseGuide = {
   steps: string[];
   mistakes: string;
   easier: string;
-  visual: MovementVisual;
+  visual?: MovementVisual;
   video?: {
     url: string;
     label: string;
@@ -51,11 +51,6 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     mistakes: "为了追求步数而跺脚、耸肩、身体后仰，或一开始就快速抬膝。",
     easier: "保持80–90步/分，缩小摆臂和抬脚幅度；需要时扶稳固桌面。",
     visual: "march",
-    video: {
-      url: "https://vimeo.com/1113270364/ee0024e627",
-      label: "原地踏步真人示范",
-      source: "NHS 肺康复 Level 1",
-    },
   },
   {
     activityId: "warmup-shoulder",
@@ -65,11 +60,6 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     mistakes: "耸肩憋气、快速甩臂，或把手臂硬拉到疼痛角度。",
     easier: "只做小幅肩胛骨后收和向下放松，手臂保持低于肩高。",
     visual: "shoulders",
-    video: {
-      url: "https://vimeo.com/892939507",
-      label: "肩部热身真人示范",
-      source: "NHS Active Against Cancer",
-    },
   },
   {
     activityId: "warmup-hip",
@@ -79,6 +69,11 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     mistakes: "弓腰低头、膝盖大量向前，或为了下得更低而失去腰背稳定。",
     easier: "臀部只后移10–15厘米；面对墙站立或用手触碰椅背辅助。",
     visual: "hinge",
+    video: {
+      url: "https://newsnetwork.mayoclinic.org/discussion/wellness-wednesday-the-hip-hinge/",
+      label: "站姿髋折叠真人示范",
+      source: "Mayo Clinic",
+    },
   },
   {
     activityId: "warmup-squat",
@@ -88,11 +83,6 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     mistakes: "膝盖向内扣、脚跟抬起，或后撤时把重心全部压到后脚。",
     easier: "浅蹲只下10–20厘米；后撤改为原地脚尖轻点，并扶住椅背。",
     visual: "squat-step",
-    video: {
-      url: "https://vimeo.com/1113270462/43799c2d13",
-      label: "坐站／浅蹲入门示范",
-      source: "NHS 肺康复 Level 1",
-    },
   },
   {
     activityId: "warmup-step",
@@ -103,9 +93,9 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     easier: "侧迈距离缩小，手臂只抬到肩高；需要时不加速原地走。",
     visual: "step-jack",
     video: {
-      url: "https://vimeo.com/1113270505/f891a0f55c",
-      label: "低强度 Star Jack 示范",
-      source: "NHS 肺康复 Level 1",
+      url: "https://www.puregym.com/exercises/cardio/jumping-jack/step-jacks/",
+      label: "站姿无跳开合步示范",
+      source: "PureGym 教练示范",
     },
   },
   {
@@ -125,11 +115,6 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     mistakes: "跺脚、屏住呼吸、身体后仰，或膝盖抬得太高导致腰部紧张。",
     easier: "降低膝盖高度和步频，改成脚尖交替点地。",
     visual: "high-knee",
-    video: {
-      url: "https://vimeo.com/1113270364/ee0024e627",
-      label: "原地踏步真人示范",
-      source: "NHS 肺康复 Level 1",
-    },
   },
   {
     activityId: "circuit-squat",
@@ -140,9 +125,9 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     easier: "在身后放稳固椅子，轻触椅面后站起；也可减小下蹲深度。",
     visual: "squat",
     video: {
-      url: "https://vimeo.com/1113270462/43799c2d13",
-      label: "坐站／深蹲入门示范",
-      source: "NHS 肺康复 Level 1",
+      url: "https://www.youtube.com/watch?v=l83R5PblSMA",
+      label: "徒手深蹲真人示范",
+      source: "PureGym 教练示范",
     },
   },
   {
@@ -154,9 +139,9 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     easier: "减慢到每秒约1拳，不转髋，只做小幅交替前伸。",
     visual: "boxing",
     video: {
-      url: "https://vimeo.com/892938979",
-      label: "影子拳真人示范",
-      source: "NHS Active Against Cancer",
+      url: "https://www.fitandwell.com/features/shadowboxing",
+      label: "站姿影子拳真人示范",
+      source: "Rumble Boxing 教练示范",
     },
   },
   {
@@ -168,9 +153,9 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     easier: "改成后撤脚尖点地，不下蹲；或扶墙、扶椅背完成。",
     visual: "reverse-lunge",
     video: {
-      url: "https://vimeo.com/878221901",
-      label: "弓步真人示范",
-      source: "NHS Active Against Cancer",
+      url: "https://www.puregym.com/exercises/legs/quad-exercises/lunges/reverse-lunges/",
+      label: "站姿后撤弓步示范",
+      source: "PureGym 教练示范",
     },
   },
   {
@@ -182,9 +167,9 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     easier: "侧迈缩小为脚尖点地，手臂只抬到胸口或肩高。",
     visual: "step-jack",
     video: {
-      url: "https://vimeo.com/1113270505/f891a0f55c",
-      label: "低强度 Star Jack 示范",
-      source: "NHS 肺康复 Level 1",
+      url: "https://www.puregym.com/exercises/cardio/jumping-jack/step-jacks/",
+      label: "站姿无跳开合步示范",
+      source: "PureGym 教练示范",
     },
   },
   {
@@ -196,9 +181,35 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     easier: "双脚向墙靠近；更难则把脚后移，但先保证身体稳定。",
     visual: "wall-pushup",
     video: {
-      url: "https://vimeo.com/878233753",
+      url: "https://www.youtube.com/watch?v=et7h1YlyuZY",
       label: "墙壁俯卧撑真人示范",
-      source: "NHS Active Against Cancer",
+      source: "物理治疗师真人示范",
+    },
+  },
+  {
+    activityId: "simple-glute-bridge",
+    activityName: "臀桥",
+    target: "40秒完成约8–12次：抬起约2秒，顶部停1秒，下降约2秒。感受臀部发力，不追求抬得很高。",
+    steps: ["仰卧屈膝，双脚踩地并与髋同宽，脚跟放在膝盖下方附近。", "腹部轻收，脚掌压地，用臀部把髋部平稳抬起。", "肩、髋、膝接近一条斜线时收紧臀部，再缓慢下降。"],
+    mistakes: "用腰向上拱、膝盖向内扣、脚离臀部太远导致腿后侧抽筋，或全程憋气。",
+    easier: "减小抬起幅度，或把脚稍微靠近臀部；如果腰部疼痛而不是臀部用力，应立即停下。",
+    video: {
+      url: "https://www.youtube.com/watch?v=tqp5XQPpTxY",
+      label: "臀桥真人示范",
+      source: "PureGym 教练示范",
+    },
+  },
+  {
+    activityId: "simple-bird-dog",
+    activityName: "鸟狗式",
+    target: "40秒左右各做3–5次，每次伸展停2–3秒。动作慢而稳定，骨盆尽量保持水平。",
+    steps: ["四点支撑，双手在肩膀正下方，双膝在髋部正下方。", "腹部轻收，同时伸出一只手和对侧腿，腿只抬到躯干高度。", "保持骨盆不转动，停2–3秒后缓慢收回，再换边。"],
+    mistakes: "塌腰、骨盆向一侧翻转、腿抬得过高，或为了追求次数而快速甩动手脚。",
+    easier: "先只抬一只手或一条腿；也可以让指尖或脚尖贴着地面向远处滑出。",
+    video: {
+      url: "https://www.youtube.com/watch?v=ZdAHe9_HeEw",
+      label: "鸟狗式真人示范",
+      source: "NASM 教练示范",
     },
   },
   {
@@ -209,11 +220,6 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     mistakes: "训练结束立刻站死、憋气，或强迫自己做过深过快的呼吸。",
     easier: "扶住稳固物体，以更小的步幅慢慢走。",
     visual: "slow-march",
-    video: {
-      url: "https://vimeo.com/944382875",
-      label: "原地踏步真人示范",
-      source: "NHS Active Against Cancer",
-    },
   },
   {
     activityId: "cooldown-calf",
@@ -224,9 +230,9 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     easier: "缩短前后脚距离，减少身体前倾。",
     visual: "calf-stretch",
     video: {
-      url: "https://vimeo.com/892941260",
-      label: "小腿拉伸真人示范",
-      source: "NHS Active Against Cancer",
+      url: "https://www.jumpstartpt.com/videos/standing-calf-stretch/",
+      label: "站姿小腿拉伸示范",
+      source: "Jump Start Physical Therapy",
     },
   },
   {
@@ -238,9 +244,9 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     easier: "用毛巾绕住脚踝，或完全改做扶墙后撤步髋前侧拉伸。",
     visual: "quad-stretch",
     video: {
-      url: "https://vimeo.com/892937049",
-      label: "大腿前侧拉伸真人示范",
-      source: "NHS Active Against Cancer",
+      url: "https://www.mayoclinic.org/healthy-lifestyle/adult-health/multimedia/standing-stretches/vid-20084701",
+      label: "站姿大腿前侧拉伸示范",
+      source: "Mayo Clinic",
     },
   },
   {
@@ -251,11 +257,6 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     mistakes: "挺胸变成塌腰、耸肩，或把手臂硬拉得过高。",
     easier: "不握手，只做肩胛骨轻轻后收5秒，再放松。",
     visual: "chest-open",
-    video: {
-      url: "https://vimeo.com/893035689",
-      label: "胸部拉伸真人示范",
-      source: "NHS Active Against Cancer",
-    },
   },
   {
     activityId: "cooldown-check",
@@ -323,6 +324,14 @@ const VOICE_GUIDANCE: Record<string, VoiceGuidance> = {
   "circuit-push": {
     intro: "双手略宽于肩放在墙上，腹部和臀部收紧。胸口靠近墙，再平稳推开。",
     legacyCue: "身体保持一条直线",
+  },
+  "simple-glute-bridge": {
+    intro: "仰卧屈膝，脚掌压地。收紧腹部，用臀部把髋部抬起，腰部不要向上拱。",
+    legacyCue: "脚掌压地，用臀部抬起髋部",
+  },
+  "simple-bird-dog": {
+    intro: "四点支撑，手在肩下、膝在髋下。伸出对侧手和腿，骨盆保持不转动。",
+    legacyCue: "对侧手腿伸出，骨盆不要转动",
   },
   "cooldown-walk": {
     intro: "继续小步慢走，不要突然停下。逐渐减小步幅和摆臂，让呼吸慢慢平稳。",

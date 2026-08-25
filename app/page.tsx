@@ -163,7 +163,7 @@ function createDefaultRoutine(id = "default-25", name = "25 分钟室内训练")
   };
 }
 
-function createSimpleRoutine(id = "simple-25", name = "精简 25 分钟训练"):
+function createSimpleRoutine(id = "simple-fullbody-25", name = "全身精简 25 分钟"):
   Routine {
   return {
     id,
@@ -176,8 +176,8 @@ function createSimpleRoutine(id = "simple-25", name = "精简 25 分钟训练"):
         rounds: 1,
         activities: [
           activity("simple-warmup-walk", "原地轻松走", 120, 0, "脚步轻，从慢到稍快"),
+          activity("simple-warmup-shoulder", "肩部和手臂活动", 60, 0, "肩颈放松，从小圈开始"),
           activity("simple-warmup-squat", "徒手深蹲", 60, 0, "先做浅蹲，动作稳定比深度重要"),
-          activity("simple-warmup-jack", "无跳开合步", 60, 0, "小幅侧迈，始终有一只脚着地"),
           activity("simple-warmup-push", "墙壁俯卧撑", 60, 0, "先站近一些，身体保持一条直线"),
         ],
       },
@@ -186,10 +186,10 @@ function createSimpleRoutine(id = "simple-25", name = "精简 25 分钟训练"):
         title: "五动作循环",
         rounds: 3,
         activities: [
-          activity("simple-main-march", "原地快走或交替抬膝", 40, 20, "身体直立，保持还能说短句"),
           activity("simple-main-squat", "徒手深蹲", 40, 20, "臀部向后下方移动"),
-          activity("simple-main-jack", "无跳开合步", 40, 20, "左右交替侧迈，不要跳"),
           activity("simple-main-push", "墙壁俯卧撑", 40, 20, "腹部轻收，胸口靠近墙"),
+          activity("simple-main-bridge", "臀桥", 40, 20, "脚掌压地，用臀部抬起髋部"),
+          activity("simple-main-bird-dog", "鸟狗式", 40, 20, "对侧手腿伸出，骨盆不要转动"),
           activity("simple-main-box", "影子拳", 40, 20, "轻快交替出拳，不要锁肘"),
         ],
       },
@@ -673,13 +673,15 @@ function ExerciseGuidePanel({ guide, player = false }: { guide: ExerciseGuide; p
           <p><strong>常见错误</strong>{guide.mistakes}</p>
           <p><strong>降低难度</strong>{guide.easier}</p>
         </div>
-        <details className="diagram-details">
-          <summary>查看简图（可选）</summary>
-          <div className="guide-visual">
-            <MovementDiagram visual={guide.visual} label={guide.activityName} />
-            <span>循环示意 · 真人视频和文字说明优先</span>
-          </div>
-        </details>
+        {guide.visual && (
+          <details className="diagram-details">
+            <summary>查看简图（可选）</summary>
+            <div className="guide-visual">
+              <MovementDiagram visual={guide.visual} label={guide.activityName} />
+              <span>循环示意 · 真人视频和文字说明优先</span>
+            </div>
+          </details>
+        )}
         {!player && (
           <p className="guide-sources">
             真人示范仅用于先熟悉动作；训练时以本页的低强度版本为准。<br />
@@ -756,7 +758,7 @@ export default function Home() {
         if (storedLibrary) {
           const parsed = JSON.parse(storedLibrary) as RoutineLibrary;
           if (parsed.routines?.length) {
-            const hasSimpleRoutine = parsed.routines.some((routine) => routine.id === "simple-25");
+            const hasSimpleRoutine = parsed.routines.some((routine) => routine.id === "simple-fullbody-25");
             setLibrary(hasSimpleRoutine
               ? parsed
               : { ...parsed, routines: [...parsed.routines, createSimpleRoutine()] });
@@ -1202,7 +1204,7 @@ export default function Home() {
   };
 
   const useSimpleRoutine = () => {
-    const existing = library.routines.find((routine) => routine.id === "simple-25");
+    const existing = library.routines.find((routine) => routine.id === "simple-fullbody-25");
     const simpleRoutine = existing ?? createSimpleRoutine();
     setLibrary((previous) => ({
       activeId: simpleRoutine.id,
@@ -1226,8 +1228,8 @@ export default function Home() {
 
   const resetRoutine = () => {
     if (!currentRoutine) return;
-    const isSimpleRoutine = currentRoutine.id === "simple-25";
-    const templateName = isSimpleRoutine ? "精简25分钟方案" : "默认25分钟方案";
+    const isSimpleRoutine = currentRoutine.id === "simple-fullbody-25";
+    const templateName = isSimpleRoutine ? "全身精简25分钟方案" : "默认25分钟方案";
     if (!window.confirm(`用${templateName}覆盖当前方案？`)) return;
     const replacement = isSimpleRoutine
       ? createSimpleRoutine(currentRoutine.id, currentRoutine.name)
@@ -1375,7 +1377,7 @@ export default function Home() {
           <div className="summary-meta">
             <span>{currentRoutine?.blocks.length ?? 0} 个环节</span>
             <span>
-              {currentRoutine?.id === "simple-25"
+              {currentRoutine?.id === "simple-fullbody-25"
                 ? "主训练 5 种动作"
                 : `${calculatedTimeline.filter((event) => event.type === "work").length} 个动作节点`}
             </span>
@@ -1406,7 +1408,7 @@ export default function Home() {
         </label>
         <div className="toolbar-actions">
           <button className="simple-plan-button" type="button" onClick={useSimpleRoutine}>
-            使用精简版 <span>主训练 5 个动作</span>
+            使用全身精简版 <span>热身与整理各 5 分钟</span>
           </button>
           <button className="secondary-button" type="button" onClick={exportBackup}>导出备份</button>
           <button className="secondary-button" type="button" onClick={() => importInputRef.current?.click()}>导入备份</button>
@@ -1420,7 +1422,7 @@ export default function Home() {
           />
           <button className="secondary-button" type="button" onClick={addRoutineCopy}>复制为新方案</button>
           <button className="secondary-button" type="button" onClick={resetRoutine}>
-            {currentRoutine?.id === "simple-25" ? "恢复精简模板" : "恢复默认内容"}
+            {currentRoutine?.id === "simple-fullbody-25" ? "恢复精简模板" : "恢复默认内容"}
           </button>
           <button className="danger-link" type="button" onClick={deleteRoutine} disabled={library.routines.length <= 1}>删除方案</button>
         </div>
@@ -1431,7 +1433,7 @@ export default function Home() {
           <span className="section-kicker">训练编排</span>
           <h2>选一个，再细调</h2>
         </div>
-        <p>刚开始不必追求动作种类。精简版只用 5 个主训练动作反复练习；环节和动作仍可横向滑动、拖动排序。</p>
+        <p>全身精简版用深蹲、墙壁俯卧撑、臀桥、鸟狗式和影子拳覆盖腿臀、上肢推、身体后侧、核心稳定与有氧；热身和整理各保留 5 分钟。</p>
       </section>
 
       {currentRoutine && (
