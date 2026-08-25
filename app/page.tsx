@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   closestCenter,
   DndContext,
@@ -55,6 +55,14 @@ type VoiceSettings = {
   enabled: boolean;
   rate: number;
   voiceURI: string;
+};
+
+type WorkoutBackup = {
+  format: "dongqilai-workout-backup";
+  version: 1;
+  exportedAt: string;
+  library: RoutineLibrary;
+  settings: VoiceSettings;
 };
 
 type TimelineEvent = {
@@ -162,6 +170,92 @@ const DEFAULT_SETTINGS: VoiceSettings = {
   rate: 1,
   voiceURI: "",
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isIntegerAtLeast(value: unknown, minimum: number) {
+  return typeof value === "number" && Number.isInteger(value) && value >= minimum;
+}
+
+function isActivity(value: unknown): value is Activity {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.id === "string" && value.id.length > 0 &&
+    typeof value.name === "string" && value.name.length > 0 &&
+    (value.kind === "timed" || value.kind === "reps") &&
+    isIntegerAtLeast(value.duration, 1) &&
+    isIntegerAtLeast(value.rest, 0) &&
+    isIntegerAtLeast(value.reps, 0) &&
+    isIntegerAtLeast(value.repeat, 1) &&
+    typeof value.cue === "string"
+  );
+}
+
+function isWorkoutBlock(value: unknown): value is WorkoutBlock {
+  if (!isRecord(value) || !Array.isArray(value.activities)) return false;
+  return (
+    typeof value.id === "string" && value.id.length > 0 &&
+    typeof value.title === "string" && value.title.length > 0 &&
+    isIntegerAtLeast(value.rounds, 1) &&
+    value.activities.every(isActivity)
+  );
+}
+
+function isRoutine(value: unknown): value is Routine {
+  if (!isRecord(value) || !Array.isArray(value.blocks)) return false;
+  if (
+    typeof value.id !== "string" || !value.id ||
+    typeof value.name !== "string" || !value.name ||
+    typeof value.updatedAt !== "number" || !Number.isFinite(value.updatedAt) ||
+    !value.blocks.every(isWorkoutBlock)
+  ) return false;
+
+  const sortableIds = new Set<string>();
+  for (const block of value.blocks) {
+    if (sortableIds.has(block.id)) return false;
+    sortableIds.add(block.id);
+    for (const item of block.activities) {
+      if (sortableIds.has(item.id)) return false;
+      sortableIds.add(item.id);
+    }
+  }
+  return true;
+}
+
+function parseWorkoutBackup(value: unknown): Pick<WorkoutBackup, "library" | "settings"> | null {
+  if (
+    !isRecord(value) ||
+    value.format !== "dongqilai-workout-backup" ||
+    value.version !== 1 ||
+    !isRecord(value.library) ||
+    !Array.isArray(value.library.routines) ||
+    value.library.routines.length === 0 ||
+    !value.library.routines.every(isRoutine) ||
+    !isRecord(value.settings) ||
+    typeof value.settings.enabled !== "boolean" ||
+    typeof value.settings.rate !== "number" ||
+    !Number.isFinite(value.settings.rate) ||
+    typeof value.settings.voiceURI !== "string"
+  ) return null;
+
+  const routines = value.library.routines;
+  const routineIds = new Set(routines.map((routine) => routine.id));
+  if (routineIds.size !== routines.length) return null;
+  const activeId = typeof value.library.activeId === "string" && routineIds.has(value.library.activeId)
+    ? value.library.activeId
+    : routines[0].id;
+
+  return {
+    library: { activeId, routines },
+    settings: {
+      enabled: value.settings.enabled,
+      rate: Math.min(1.35, Math.max(0.75, value.settings.rate)),
+      voiceURI: value.settings.voiceURI,
+    },
+  };
+}
 
 function uid(prefix: string) {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -504,6 +598,7 @@ export default function Home() {
   const announcedRef = useRef<Set<string>>(new Set());
   const audioContextRef = useRef<AudioContext | null>(null);
   const wakeLockRef = useRef<{ release: () => Promise<void>; released?: boolean } | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -983,6 +1078,54 @@ export default function Home() {
     setSelectedActivityId(replacement.blocks[0].activities[0]?.id ?? "");
   };
 
+  const exportBackup = () => {
+    const backup: WorkoutBackup = {
+      format: "dongqilai-workout-backup",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      library,
+      settings,
+    };
+    const file = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+    const downloadUrl = URL.createObjectURL(file);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = `dongqilai-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+  };
+
+  const importBackup = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      window.alert("备份文件过大，无法导入。");
+      return;
+    }
+
+    try {
+      const parsed = parseWorkoutBackup(JSON.parse(await file.text()));
+      if (!parsed) {
+        window.alert("这个文件不是有效的“动起来”备份。");
+        return;
+      }
+      if (!window.confirm(`导入后将用备份中的 ${parsed.library.routines.length} 个方案覆盖当前内容。继续吗？`)) return;
+
+      const activeRoutine = parsed.library.routines.find((routine) => routine.id === parsed.library.activeId)
+        ?? parsed.library.routines[0];
+      setLibrary(parsed.library);
+      setSettings(parsed.settings);
+      setSelectedBlockId(activeRoutine.blocks[0]?.id ?? "");
+      setSelectedActivityId(activeRoutine.blocks[0]?.activities[0]?.id ?? "");
+      window.alert("备份已导入并保存在当前设备中。");
+    } catch {
+      window.alert("无法读取这个备份文件，请确认文件没有损坏。");
+    }
+  };
+
   const currentEvent = timeline[currentIndex];
   const nextWork = timeline.slice(currentIndex + 1).find((event) => event.type === "work");
   const elapsedBefore = timeline
@@ -1091,6 +1234,16 @@ export default function Home() {
           </select>
         </label>
         <div className="toolbar-actions">
+          <button className="secondary-button" type="button" onClick={exportBackup}>导出备份</button>
+          <button className="secondary-button" type="button" onClick={() => importInputRef.current?.click()}>导入备份</button>
+          <input
+            ref={importInputRef}
+            hidden
+            type="file"
+            accept="application/json,.json"
+            onChange={importBackup}
+            aria-label="选择训练备份文件"
+          />
           <button className="secondary-button" type="button" onClick={addRoutineCopy}>复制为新方案</button>
           <button className="secondary-button" type="button" onClick={resetRoutine}>恢复默认内容</button>
           <button className="danger-link" type="button" onClick={deleteRoutine} disabled={library.routines.length <= 1}>删除方案</button>

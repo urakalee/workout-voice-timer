@@ -53,6 +53,9 @@ test("includes configurable timeline, voice, drag-and-drop, and offline support"
   assert.match(page, /SpeechSynthesisUtterance/);
   assert.match(page, /wakeLock\.request/);
   assert.match(page, /localStorage\.setItem/);
+  assert.match(page, /dongqilai-workout-backup/);
+  assert.match(page, /导出备份/);
+  assert.match(page, /导入备份/);
   assert.match(page, /原地快走或交替抬膝/);
   assert.match(page, /健腹轮/);
 
