@@ -76,7 +76,7 @@ test("includes configurable timeline, voice, drag-and-drop, and offline support"
   assert.match(page, /ExerciseGuidePanel/);
   assert.match(page, /看真人视频示范/);
   assert.match(page, /查看简图（可选）/);
-  assert.match(guides, /前20秒约80–90步\/分/);
+  assert.match(guides, /标准节拍为80、90、100步\/分/);
   assert.match(guides, /无跳开合步：一只脚向右迈一步|右脚向右迈一步/);
   assert.match(guides, /前臂向下、向后压支撑垫/);
   assert.match(guides, /现在切换到交替后撤点地/);
@@ -87,6 +87,10 @@ test("includes configurable timeline, voice, drag-and-drop, and offline support"
   assert.match(guides, /Mayo Clinic/);
   assert.ok((guides.match(/video: \{/g) ?? []).length >= 10);
   assert.match(page, /findVoiceGuidance/);
+  assert.match(page, /walkingBeatMode/);
+  assert.match(page, /80 → 90 → 100 步\/分/);
+  assert.match(page, /每响一下走一步/);
+  assert.match(page, /cadenceBeep/);
   assert.match(page, /timed-/);
   assert.equal((guides.match(/activityId: "/g) ?? []).length, 19);
   assert.match(diagram, /requestAnimationFrame/);

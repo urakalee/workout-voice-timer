@@ -53,10 +53,13 @@ type RoutineLibrary = {
   routines: Routine[];
 };
 
+type WalkingBeatMode = "off" | "gentle" | "standard";
+
 type VoiceSettings = {
   enabled: boolean;
   rate: number;
   voiceURI: string;
+  walkingBeatMode: WalkingBeatMode;
 };
 
 type WorkoutBackup = {
@@ -217,6 +220,12 @@ const DEFAULT_SETTINGS: VoiceSettings = {
   enabled: true,
   rate: 1,
   voiceURI: "",
+  walkingBeatMode: "standard",
+};
+
+const WALKING_CADENCE_PLANS: Record<Exclude<WalkingBeatMode, "off">, readonly [number, number, number]> = {
+  gentle: [70, 80, 90],
+  standard: [80, 90, 100],
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -294,6 +303,7 @@ function parseWorkoutBackup(value: unknown): Pick<WorkoutBackup, "library" | "se
   const activeId = typeof value.library.activeId === "string" && routineIds.has(value.library.activeId)
     ? value.library.activeId
     : routines[0].id;
+  const walkingBeatMode = value.settings.walkingBeatMode;
 
   return {
     library: { activeId, routines },
@@ -301,6 +311,9 @@ function parseWorkoutBackup(value: unknown): Pick<WorkoutBackup, "library" | "se
       enabled: value.settings.enabled,
       rate: Math.min(1.35, Math.max(0.75, value.settings.rate)),
       voiceURI: value.settings.voiceURI,
+      walkingBeatMode: walkingBeatMode === "off" || walkingBeatMode === "gentle" || walkingBeatMode === "standard"
+        ? walkingBeatMode
+        : DEFAULT_SETTINGS.walkingBeatMode,
     },
   };
 }
@@ -393,6 +406,17 @@ function spokenDuration(totalSeconds: number) {
   if (minutes && seconds) return `${minutes}分${seconds}秒`;
   if (minutes) return `${minutes}分钟`;
   return `${seconds}秒`;
+}
+
+function walkingCadencePlan(mode: WalkingBeatMode) {
+  return mode === "off" ? null : WALKING_CADENCE_PLANS[mode];
+}
+
+function walkingCadenceAt(mode: WalkingBeatMode, elapsed: number, duration: number) {
+  const plan = walkingCadencePlan(mode);
+  if (!plan) return null;
+  const fraction = duration > 0 ? elapsed / duration : 0;
+  return plan[fraction >= 2 / 3 ? 2 : fraction >= 1 / 3 ? 1 : 0];
 }
 
 function blockDuration(block: WorkoutBlock) {
@@ -712,6 +736,7 @@ export default function Home() {
   const deadlineRef = useRef(0);
   const announcedRef = useRef<Set<string>>(new Set());
   const audioContextRef = useRef<AudioContext | null>(null);
+  const nextCadenceBeatRef = useRef(0);
   const wakeLockRef = useRef<{ release: () => Promise<void>; released?: boolean } | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -832,6 +857,21 @@ export default function Home() {
     oscillator.stop(context.currentTime + 0.14);
   }, []);
 
+  const cadenceBeep = useCallback(() => {
+    const context = audioContextRef.current;
+    if (!context) return;
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.frequency.value = 520;
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.055, context.currentTime + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.055);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.06);
+  }, []);
+
   const requestWakeLock = useCallback(async () => {
     try {
       const nav = navigator as Navigator & {
@@ -881,12 +921,18 @@ export default function Home() {
           : spokenDuration(event.duration);
       const voiceGuidance = findVoiceGuidance(event.activityId, event.name);
       const instruction = voiceGuidance?.intro || event.cue;
+      const cadencePlan = voiceGuidance && findExerciseGuide(event.activityId, event.name)?.activityId === "warmup-walk"
+        ? walkingCadencePlan(settings.walkingBeatMode)
+        : null;
+      const cadenceInstruction = cadencePlan
+        ? `节拍从每分钟${cadencePlan[0]}步开始，每响一下走一步。`
+        : "";
       const customCue = voiceGuidance && event.cue && event.cue !== voiceGuidance.legacyCue && event.cue !== voiceGuidance.intro
         ? `补充提醒，${event.cue}。`
         : "";
-      speak(`${round}${set}开始${event.name}，${target}。${instruction}。${customCue}`);
+      speak(`${round}${set}开始${event.name}，${target}。${instruction}。${cadenceInstruction}${customCue}`);
     },
-    [speak],
+    [settings.walkingBeatMode, speak],
   );
 
   const activateEvent = useCallback(
@@ -930,7 +976,13 @@ export default function Home() {
         });
         const latestCue = dueCues.at(-1);
         if (latestCue) {
-          speak(latestCue.text);
+          const cadencePlan = findExerciseGuide(current.activityId, current.name)?.activityId === "warmup-walk"
+            ? walkingCadencePlan(settings.walkingBeatMode)
+            : null;
+          const cadenceIndex = latestCue.atFraction >= 2 / 3 ? 2 : latestCue.atFraction >= 1 / 3 ? 1 : 0;
+          speak(cadencePlan
+            ? `现在节拍调整为每分钟${cadencePlan[cadenceIndex]}步。每响一下走一步；仍要能够轻松说完整句子。`
+            : latestCue.text);
           spokeTimedCue = true;
         }
       }
@@ -945,7 +997,31 @@ export default function Home() {
       if (Date.now() >= deadlineRef.current) activateEvent(currentIndex + 1);
     }, 200);
     return () => window.clearInterval(timer);
-  }, [activateEvent, beep, currentIndex, playerOpen, playerStatus, speak, timeline]);
+  }, [activateEvent, beep, currentIndex, playerOpen, playerStatus, settings.walkingBeatMode, speak, timeline]);
+
+  useEffect(() => {
+    if (!playerOpen || playerStatus !== "running") return;
+    const current = timeline[currentIndex];
+    if (
+      !current ||
+      current.type !== "work" ||
+      findExerciseGuide(current.activityId, current.name)?.activityId !== "warmup-walk" ||
+      settings.walkingBeatMode === "off"
+    ) return;
+
+    nextCadenceBeatRef.current = Date.now();
+    const timer = window.setInterval(() => {
+      const now = Date.now();
+      if (now < nextCadenceBeatRef.current) return;
+      const elapsed = Math.max(0, current.duration - Math.max(0, (deadlineRef.current - now) / 1000));
+      const cadence = walkingCadenceAt(settings.walkingBeatMode, elapsed, current.duration);
+      if (!cadence) return;
+      cadenceBeep();
+      nextCadenceBeatRef.current += 60_000 / cadence;
+      if (nextCadenceBeatRef.current < now) nextCadenceBeatRef.current = now + 60_000 / cadence;
+    }, 25);
+    return () => window.clearInterval(timer);
+  }, [cadenceBeep, currentIndex, playerOpen, playerStatus, settings.walkingBeatMode, timeline]);
 
   useEffect(
     () => () => {
@@ -1296,6 +1372,10 @@ export default function Home() {
     .slice(0, currentIndex)
     .reduce((sum, event) => sum + event.duration, 0);
   const elapsedCurrent = currentEvent ? currentEvent.duration - remaining : 0;
+  const currentCadence = currentEvent?.type === "work" &&
+    findExerciseGuide(currentEvent.activityId, currentEvent.name)?.activityId === "warmup-walk"
+    ? walkingCadenceAt(settings.walkingBeatMode, elapsedCurrent, currentEvent.duration)
+    : null;
   const playerProgress = totalSeconds
     ? Math.min(100, ((elapsedBefore + elapsedCurrent) / totalSeconds) * 100)
     : 0;
@@ -1351,6 +1431,20 @@ export default function Home() {
                   value={settings.rate}
                   onChange={(event) => setSettings((previous) => ({ ...previous, rate: Number(event.target.value) }))}
                 />
+              </label>
+              <label>
+                <span>原地走节拍</span>
+                <select
+                  value={settings.walkingBeatMode}
+                  onChange={(event) => setSettings((previous) => ({
+                    ...previous,
+                    walkingBeatMode: event.target.value as WalkingBeatMode,
+                  }))}
+                >
+                  <option value="standard">标准：80 → 90 → 100 步/分</option>
+                  <option value="gentle">舒缓：70 → 80 → 90 步/分</option>
+                  <option value="off">关闭节拍，只听语音</option>
+                </select>
               </label>
               <button className="secondary-button" type="button" onClick={() => speak("语音测试。准备开始训练")}>测试语音</button>
             </div>
@@ -1591,6 +1685,11 @@ export default function Home() {
                       : "准备完成训练"
                     : currentEvent.cue || "保持平稳呼吸，动作标准优先"}
                 </p>
+                {currentCadence && (
+                  <p className="cadence-status">
+                    <strong>{currentCadence}</strong> 步/分 · 每响一下走一步
+                  </p>
+                )}
                 {currentEvent.type === "work" && currentGuide && (
                   <button className="player-guide-button" type="button" onClick={openCurrentGuide}>
                     ？动作怎么做

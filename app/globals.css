@@ -1285,6 +1285,24 @@ footer {
   font-size: 12px;
 }
 
+.cadence-status {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 14px 0 0;
+  padding: 9px 14px;
+  border: 1px solid rgba(146, 218, 201, 0.32);
+  border-radius: 999px;
+  background: rgba(146, 218, 201, 0.1);
+  color: #d8fff6;
+  font-size: 13px;
+}
+
+.cadence-status strong {
+  color: #92dac9;
+  font-size: 18px;
+}
+
 .complete-state {
   display: grid;
   justify-items: center;
