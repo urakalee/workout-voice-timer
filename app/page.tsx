@@ -120,8 +120,10 @@ function createSimpleRoutine(id = "simple-fullbody-25", name = "全身精简 25 
         title: "热身",
         rounds: 1,
         activities: [
-          activity("simple-warmup-walk", "原地轻松走", 240, 0, "脚步轻，从慢到稍快"),
+          activity("simple-warmup-walk", "原地轻松走", 120, 0, "脚步轻，从慢到稍快"),
           activity("simple-warmup-shoulder", "肩部和手臂活动", 60, 0, "肩颈放松，从小圈开始"),
+          activity("simple-warmup-hip", "髋部活动与髋折叠", 60, 0, "臀部向后推，腰背保持稳定"),
+          activity("simple-warmup-step-back", "交替后撤点地", 60, 0, "后脚轻点地，重心主要留在前脚"),
         ],
       },
       {
@@ -164,7 +166,8 @@ function upgradeSimpleWarmup(routine: Routine): Routine {
   const hasDuplicatedMainMoves = warmup?.activities.some((item) =>
     item.id === "simple-warmup-squat" || item.id === "simple-warmup-push",
   );
-  if (!warmup || !hasDuplicatedMainMoves) return routine;
+  const hasFourMinuteWalk = warmup?.activities.some((item) => item.id === "simple-warmup-walk" && item.duration === 240);
+  if (!warmup || (!hasDuplicatedMainMoves && !hasFourMinuteWalk)) return routine;
 
   return {
     ...routine,
@@ -174,8 +177,10 @@ function upgradeSimpleWarmup(routine: Routine): Routine {
           ...block,
           title: "热身",
           activities: [
-            activity("simple-warmup-walk", "原地轻松走", 240, 0, "脚步轻，从慢到稍快"),
+            activity("simple-warmup-walk", "原地轻松走", 120, 0, "脚步轻，从慢到稍快"),
             activity("simple-warmup-shoulder", "肩部和手臂活动", 60, 0, "肩颈放松，从小圈开始"),
+            activity("simple-warmup-hip", "髋部活动与髋折叠", 60, 0, "臀部向后推，腰背保持稳定"),
+            activity("simple-warmup-step-back", "交替后撤点地", 60, 0, "后脚轻点地，重心主要留在前脚"),
           ],
         }
         : block,

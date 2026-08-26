@@ -83,6 +83,19 @@ export const EXERCISE_GUIDES: ExerciseGuide[] = [
     },
   },
   {
+    activityId: "warmup-step-back",
+    activityName: "交替后撤点地",
+    target: "1分钟左右各做8–12次。后脚只轻轻向后点地，重心主要留在前脚；动作不需要下蹲。",
+    steps: ["站直，双脚与髋同宽，膝盖保持放松。", "右脚向后迈一小步，用脚尖轻点地后收回。", "换左脚重复，躯干保持直立，前脚脚掌始终稳稳贴地。"],
+    mistakes: "步幅过大、把重心压到后脚、膝盖内扣，或为了追求幅度而前扑。",
+    easier: "缩小后撤距离，只把脚尖向后轻点；需要时扶稳固桌面或墙面。",
+    video: {
+      url: "https://www.puregym.com/exercises/legs/quad-exercises/lunges/reverse-lunges/",
+      label: "后撤步真人示范",
+      source: "PureGym 教练示范",
+    },
+  },
+  {
     activityId: "warmup-squat",
     activityName: "浅蹲与交替后撤步",
     target: "前30秒做6–10次浅蹲；后30秒左右交替后撤点地各6–10次。动作连续但不赶速度。",
@@ -297,6 +310,10 @@ const VOICE_GUIDANCE: Record<string, VoiceGuidance> = {
     intro: "膝盖微屈，臀部向后推，腰背保持稳定。用臀部带动身体回到直立。",
     legacyCue: "臀部向后推，腰背保持稳定",
   },
+  "warmup-step-back": {
+    intro: "一只脚向后轻点地后收回，再换另一侧。重心主要留在前脚，不需要下蹲。",
+    legacyCue: "后脚轻点地，重心主要留在前脚",
+  },
   "warmup-squat": {
     intro: "先做浅蹲。臀部向后下方移动，膝盖朝脚尖方向，脚跟不要抬起。",
     legacyCue: "膝盖方向与脚尖保持一致",
@@ -383,6 +400,12 @@ const EXERCISE_RHYTHMS: Record<string, ExerciseRhythm> = {
     gentleBpm: [12, 12, 20],
     pattern: ["慢慢完成一次"],
     spokenPattern: "前两段每响一下完成一次慢速肩绕环；最后一段每响一下做一次轻柔摆臂",
+  },
+  "warmup-step-back": {
+    standardBpm: 60,
+    gentleBpm: 50,
+    pattern: ["右后点", "回中", "左后点", "回中"],
+    spokenPattern: "按右后点、回中、左后点、回中的四拍循环",
   },
   "circuit-march": {
     standardBpm: 100,

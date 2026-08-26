@@ -58,10 +58,11 @@ test("includes configurable timeline, voice, drag-and-drop, and offline support"
     page.indexOf("const DEFAULT_LIBRARY"),
   );
   assert.doesNotMatch(simpleRoutineSource, /健腹轮/);
-  assert.doesNotMatch(simpleRoutineSource, /髋折叠/);
   assert.match(simpleRoutineSource, /臀桥/);
   assert.match(simpleRoutineSource, /鸟狗式/);
   assert.match(simpleRoutineSource, /影子拳/);
+  assert.match(simpleRoutineSource, /髋部活动与髋折叠/);
+  assert.match(simpleRoutineSource, /交替后撤点地/);
   assert.match(simpleRoutineSource, /title: "热身"/);
   assert.match(simpleRoutineSource, /放松恢复/);
   assert.match(simpleRoutineSource, /rounds: 3/);
@@ -104,7 +105,7 @@ test("includes configurable timeline, voice, drag-and-drop, and offline support"
   assert.match(guides, /四拍一次，慢慢下/);
   assert.match(guides, /吸气四拍，呼气六拍/);
   assert.match(page, /timed-/);
-  assert.equal((guides.match(/activityId: "/g) ?? []).length, 19);
+  assert.equal((guides.match(/activityId: "/g) ?? []).length, 20);
   assert.match(diagram, /requestAnimationFrame/);
   assert.match(diagram, /prefers-reduced-motion/);
   assert.doesNotMatch(page, /activity\("core-wheel"/);
