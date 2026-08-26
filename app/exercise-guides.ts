@@ -378,6 +378,12 @@ const EXERCISE_RHYTHMS: Record<string, ExerciseRhythm> = {
     pattern: ["交替踏步"],
     spokenPattern: "每响一下走一步",
   },
+  "warmup-shoulder": {
+    standardBpm: [18, 18, 30],
+    gentleBpm: [12, 12, 20],
+    pattern: ["慢慢完成一次"],
+    spokenPattern: "前两段每响一下完成一次慢速肩绕环；最后一段每响一下做一次轻柔摆臂",
+  },
   "circuit-march": {
     standardBpm: 100,
     gentleBpm: 90,

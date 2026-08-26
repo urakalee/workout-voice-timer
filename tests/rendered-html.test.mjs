@@ -98,6 +98,8 @@ test("includes configurable timeline, voice, drag-and-drop, and offline support"
   assert.match(page, /说明结束后，节拍与倒计时同时开始/);
   assert.match(page, /skipAnnouncement/);
   assert.match(guides, /EXERCISE_RHYTHMS/);
+  assert.match(guides, /"warmup-shoulder"/);
+  assert.match(guides, /每响一下完成一次慢速肩绕环/);
   assert.match(guides, /四拍一次，慢慢下/);
   assert.match(guides, /吸气四拍，呼气六拍/);
   assert.match(page, /timed-/);
