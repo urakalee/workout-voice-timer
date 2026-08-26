@@ -62,9 +62,10 @@ test("includes configurable timeline, voice, drag-and-drop, and offline support"
   assert.match(simpleRoutineSource, /臀桥/);
   assert.match(simpleRoutineSource, /鸟狗式/);
   assert.match(simpleRoutineSource, /影子拳/);
-  assert.match(simpleRoutineSource, /熟悉动作与热身/);
+  assert.match(simpleRoutineSource, /title: "热身"/);
   assert.match(simpleRoutineSource, /放松恢复/);
   assert.match(simpleRoutineSource, /rounds: 3/);
+  assert.doesNotMatch(simpleRoutineSource, /simple-warmup-squat|simple-warmup-push/);
   assert.match(page, /DndContext/);
   assert.match(page, /horizontalListSortingStrategy/);
   assert.match(page, /SelectedActivityEditor/);

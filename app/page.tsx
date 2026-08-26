@@ -117,13 +117,11 @@ function createSimpleRoutine(id = "simple-fullbody-25", name = "全身精简 25 
     blocks: [
       {
         id: "simple-block-warmup",
-        title: "熟悉动作与热身",
+        title: "热身",
         rounds: 1,
         activities: [
-          activity("simple-warmup-walk", "原地轻松走", 120, 0, "脚步轻，从慢到稍快"),
+          activity("simple-warmup-walk", "原地轻松走", 240, 0, "脚步轻，从慢到稍快"),
           activity("simple-warmup-shoulder", "肩部和手臂活动", 60, 0, "肩颈放松，从小圈开始"),
-          activity("simple-warmup-squat", "徒手深蹲", 60, 0, "先做浅蹲，动作稳定比深度重要"),
-          activity("simple-warmup-push", "墙壁俯卧撑", 60, 0, "先站近一些，身体保持一条直线"),
         ],
       },
       {
@@ -160,8 +158,35 @@ const DEFAULT_LIBRARY: RoutineLibrary = {
 
 const LEGACY_BUILT_IN_ROUTINE_IDS = new Set(["default-25", "simple-25"]);
 
+function upgradeSimpleWarmup(routine: Routine): Routine {
+  if (routine.id !== "simple-fullbody-25") return routine;
+  const warmup = routine.blocks.find((block) => block.id === "simple-block-warmup");
+  const hasDuplicatedMainMoves = warmup?.activities.some((item) =>
+    item.id === "simple-warmup-squat" || item.id === "simple-warmup-push",
+  );
+  if (!warmup || !hasDuplicatedMainMoves) return routine;
+
+  return {
+    ...routine,
+    blocks: routine.blocks.map((block) =>
+      block.id === "simple-block-warmup"
+        ? {
+          ...block,
+          title: "热身",
+          activities: [
+            activity("simple-warmup-walk", "原地轻松走", 240, 0, "脚步轻，从慢到稍快"),
+            activity("simple-warmup-shoulder", "肩部和手臂活动", 60, 0, "肩颈放松，从小圈开始"),
+          ],
+        }
+        : block,
+    ),
+  };
+}
+
 function normalizeRoutineLibrary(library: RoutineLibrary): RoutineLibrary {
-  const routines = library.routines.filter((routine) => !LEGACY_BUILT_IN_ROUTINE_IDS.has(routine.id));
+  const routines = library.routines
+    .filter((routine) => !LEGACY_BUILT_IN_ROUTINE_IDS.has(routine.id))
+    .map(upgradeSimpleWarmup);
   const hasCurrentBuiltIn = routines.some((routine) => routine.id === "simple-fullbody-25");
   const nextRoutines = hasCurrentBuiltIn ? routines : [createSimpleRoutine(), ...routines];
   const activeId = nextRoutines.some((routine) => routine.id === library.activeId)
