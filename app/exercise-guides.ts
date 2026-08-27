@@ -392,14 +392,14 @@ const EXERCISE_RHYTHMS: Record<string, ExerciseRhythm> = {
   "warmup-walk": {
     standardBpm: [80, 90, 100],
     gentleBpm: [70, 80, 90],
-    pattern: ["交替踏步"],
-    spokenPattern: "每响一下走一步",
+    pattern: ["1", "2"],
+    spokenPattern: "按1、2交替，每个数字走一步",
   },
   "warmup-shoulder": {
     standardBpm: [18, 18, 30],
     gentleBpm: [12, 12, 20],
-    pattern: ["慢慢完成一次"],
-    spokenPattern: "前两段每响一下完成一次慢速肩绕环；最后一段每响一下做一次轻柔摆臂",
+    pattern: ["1", "2", "3", "4"],
+    spokenPattern: "向后绕时四拍一圈，按1、2、3、4进行；向前绕时也按1、2、3、4进行；最后摆臂时左右交替",
   },
   "warmup-step-back": {
     standardBpm: 60,
@@ -410,8 +410,8 @@ const EXERCISE_RHYTHMS: Record<string, ExerciseRhythm> = {
   "circuit-march": {
     standardBpm: 100,
     gentleBpm: 90,
-    pattern: ["左步", "右步"],
-    spokenPattern: "每响一下换一只脚",
+    pattern: ["1", "2"],
+    spokenPattern: "按1、2交替，每个数字换一只脚",
   },
   "circuit-squat": {
     standardBpm: 60,
@@ -458,8 +458,8 @@ const EXERCISE_RHYTHMS: Record<string, ExerciseRhythm> = {
   "cooldown-walk": {
     standardBpm: [90, 80, 70],
     gentleBpm: [80, 70, 60],
-    pattern: ["交替踏步"],
-    spokenPattern: "每响一下走一步，跟随节拍逐渐放慢",
+    pattern: ["1", "2"],
+    spokenPattern: "按1、2交替，每个数字走一步，跟随节拍逐渐放慢",
   },
   "cooldown-check": {
     standardBpm: 60,

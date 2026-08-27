@@ -1025,14 +1025,16 @@ export default function Home() {
       const bpm = rhythmBpmAt(rhythm, settings.walkingBeatMode, elapsed, current.duration);
       if (!bpm) return;
       const patternIndex = rhythmBeatIndexRef.current % rhythm.pattern.length;
-      setRhythmBeatLabel(rhythm.pattern[patternIndex] ?? "");
-      cadenceBeep(patternIndex === 0);
+      const cadenceCue = rhythm.pattern[patternIndex] ?? "";
+      setRhythmBeatLabel(cadenceCue);
+      if (settings.enabled) speak(cadenceCue);
+      else cadenceBeep(patternIndex === 0);
       rhythmBeatIndexRef.current += 1;
       nextCadenceBeatRef.current += 60_000 / bpm;
       if (nextCadenceBeatRef.current < now) nextCadenceBeatRef.current = now + 60_000 / bpm;
     }, 25);
     return () => window.clearInterval(timer);
-  }, [cadenceBeep, currentIndex, playerOpen, playerStatus, settings.walkingBeatMode, timeline]);
+  }, [cadenceBeep, currentIndex, playerOpen, playerStatus, settings.enabled, settings.walkingBeatMode, speak, timeline]);
 
   useEffect(
     () => () => {
