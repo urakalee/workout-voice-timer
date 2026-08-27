@@ -813,9 +813,12 @@ export default function Home() {
   }, []);
 
   const availableVoices = useMemo(() => {
-    const chinese = voices.filter((voice) => voice.lang.toLowerCase().startsWith("zh"));
-    return chinese.length ? chinese : voices;
+    return voices.filter((voice) => voice.lang.toLowerCase() === "zh-cn");
   }, [voices]);
+
+  const selectedVoiceURI = availableVoices.some((voice) => voice.voiceURI === settings.voiceURI)
+    ? settings.voiceURI
+    : "";
 
   const speak = useCallback(
     (text: string, onDone?: () => void) => {
@@ -824,7 +827,7 @@ export default function Home() {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = "zh-CN";
       utterance.rate = settings.rate;
-      const selected = voices.find((voice) => voice.voiceURI === settings.voiceURI);
+      const selected = availableVoices.find((voice) => voice.voiceURI === selectedVoiceURI);
       if (selected) utterance.voice = selected;
       let finished = false;
       const finish = () => {
@@ -837,7 +840,7 @@ export default function Home() {
       window.speechSynthesis.speak(utterance);
       return true;
     },
-    [settings, voices],
+    [availableVoices, selectedVoiceURI, settings],
   );
 
   const beep = useCallback((frequency = 720) => {
@@ -1418,7 +1421,7 @@ export default function Home() {
               <label>
                 <span>中文语音</span>
                 <select
-                  value={settings.voiceURI}
+                  value={selectedVoiceURI}
                   onChange={(event) => setSettings((previous) => ({ ...previous, voiceURI: event.target.value }))}
                 >
                   <option value="">系统默认</option>
